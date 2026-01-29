@@ -17,12 +17,25 @@ body {
   overflow-x: hidden;
 }
 
+/* Shader background */
+#shader-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+}
+
+#shader-bg canvas {
+  width: 100%;
+  height: 100%;
+}
+
 /* The living canvas */
 .universe {
   position: relative;
   width: 100vw;
   min-height: 100vh;
   padding: 40px;
+  perspective: 1000px;
 }
 
 /* Floating blobs */
@@ -79,12 +92,19 @@ body {
 .cell:hover {
   border-color: rgba(255,255,255,0.2);
   background: rgba(255,255,255,0.05);
+  transform: translateZ(20px) rotateX(2deg) rotateY(-2deg);
+}
+
+.cell {
+  transform-style: preserve-3d;
 }
 
 .cell.expanded {
   z-index: 100;
   background: rgba(10,10,15,0.95);
   border-color: var(--pink);
+  cursor: default;
+  animation: none;
 }
 
 .cell-inner {
@@ -404,18 +424,48 @@ body {
     left: auto !important;
     right: auto !important;
     top: auto !important;
+    bottom: auto !important;
     width: 100% !important;
+    height: auto !important;
     margin-bottom: 16px;
-    border-radius: 20px !important;
+    transform: none !important;
+    animation: none !important;
   }
   
   .cell.expanded {
     min-height: auto !important;
   }
   
+  .cell-inner {
+    padding: 16px;
+  }
+  
   .universe {
-    padding: 20px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
+    min-height: auto;
+  }
+  
+  .blob {
+    display: none;
+  }
+  
+  .me-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .me-avatar {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  
+  .me-name {
+    font-size: 1.4rem;
+  }
+  
+  #shader-bg {
+    display: none;
   }
 }

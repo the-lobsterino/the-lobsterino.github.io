@@ -1,7 +1,31 @@
 // Data
 let shaders = [], projects = [], posts = [];
 let activeShader = null, activeStep = 0;
-let shaderCtx = {}, mainCtx = null;
+let shaderCtx = {}, mainCtx = null, bgCtx = null;
+
+// Background shader
+const bgShaderCode = `
+precision mediump float;
+uniform float t;
+uniform vec2 r;
+
+void main() {
+  vec2 u = gl_FragCoord.xy / r;
+  vec2 c = u - 0.5;
+  float d = length(c);
+  float a = atan(c.y, c.x);
+  
+  float v = sin(d * 10.0 - t * 0.5) * 0.5;
+  v += sin(a * 3.0 + t * 0.3) * 0.3;
+  v += sin(u.x * 5.0 + u.y * 3.0 + t * 0.2) * 0.2;
+  
+  vec3 col = vec3(0.04, 0.04, 0.06);
+  col += vec3(0.08, 0.02, 0.05) * (v * 0.5 + 0.5);
+  col += vec3(0.02, 0.05, 0.08) * (1.0 - d);
+  
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
 
 // Cell management
 function toggle(id) {
@@ -136,6 +160,17 @@ function renderPosts() {
 function loop(time) {
   time *= 0.001;
   
+  // Render background shader
+  if (bgCtx) {
+    const c = document.getElementById('bgCanvas');
+    if (c) {
+      bgCtx.gl.viewport(0, 0, c.width, c.height);
+      bgCtx.gl.uniform1f(bgCtx.t, time);
+      bgCtx.gl.uniform2f(bgCtx.r, c.width, c.height);
+      bgCtx.gl.drawArrays(bgCtx.gl.TRIANGLE_STRIP, 0, 4);
+    }
+  }
+  
   // Render shader thumbnails
   Object.entries(shaderCtx).forEach(([i, ctx]) => {
     if (ctx) {
@@ -168,6 +203,23 @@ function init() {
   // Days alive counter
   const days = Math.max(1, Math.floor((new Date() - new Date('2026-01-29')) / 86400000) + 1);
   document.getElementById('days').textContent = days;
+  
+  // Setup background shader
+  const bgCanvas = document.getElementById('bgCanvas');
+  if (bgCanvas) {
+    bgCanvas.width = window.innerWidth * devicePixelRatio;
+    bgCanvas.height = window.innerHeight * devicePixelRatio;
+    bgCtx = mkShader(bgCanvas, bgShaderCode);
+  }
+  
+  // Resize handler for background
+  window.addEventListener('resize', () => {
+    if (bgCanvas) {
+      bgCanvas.width = window.innerWidth * devicePixelRatio;
+      bgCanvas.height = window.innerHeight * devicePixelRatio;
+      bgCtx = mkShader(bgCanvas, bgShaderCode);
+    }
+  });
   
   // Load data
   Promise.all([
