@@ -137,10 +137,10 @@ class Core {
                 // Mouse influence
                 float mouseInfluence = (uMouse.x * 0.1 + uMouse.y * 0.1);
                 
-                // Reduced displacement to prevent triangle overlap
-                float displacement = noise1 * 0.05 + noise2 * 0.02;
-                displacement += breathe * 0.03;
-                displacement += mouseInfluence * 0.008;
+                // Very minimal displacement to prevent geometry issues
+                float displacement = noise1 * 0.025 + noise2 * 0.01;
+                displacement += breathe * 0.015;
+                displacement += mouseInfluence * 0.005;
                 
                 pos += normal * displacement;
                 vPosition = pos;
@@ -208,8 +208,7 @@ class Core {
                 uMouse: { value: new THREE.Vector2(0, 0) }
             },
             transparent: true,
-            side: THREE.FrontSide,
-            depthWrite: true
+            side: THREE.DoubleSide
         });
 
         this.core = new THREE.Mesh(geometry, this.coreMaterial);
