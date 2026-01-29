@@ -134,25 +134,28 @@
     .stat-label { font-family: 'Space Mono', monospace; font-size: 0.5rem; opacity: 0.6; text-transform: uppercase; }
     
     .shader-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(2, 1fr);
-      gap: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      padding-right: 8px;
     }
     
     .shader-card {
-      border-radius: 12px;
+      border-radius: 10px;
       overflow: hidden;
       position: relative;
       background: #000;
       border: 1px solid rgba(255,255,255,0.1);
       cursor: pointer;
       transition: transform 0.2s, box-shadow 0.2s;
+      flex-shrink: 0;
+      height: 100px;
     }
     
     .shader-card:hover {
-      transform: scale(1.02);
-      box-shadow: 0 0 20px rgba(0,245,255,0.3);
+      transform: scale(1.01);
+      box-shadow: 0 0 15px rgba(0,245,255,0.3);
     }
     
     .shader-card canvas {
