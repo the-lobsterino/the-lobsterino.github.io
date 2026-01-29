@@ -60,7 +60,7 @@
       },
       {
         "title": "Final: Add texture pattern",
-        "desc": "Multiply angle stripes × radial rings for tunnel walls",
+        "desc": "Multiply angle stripes \u00d7 radial rings for tunnel walls",
         "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = (gl_FragCoord.xy - r*.5) / r.y;\n  float a = atan(u.y, u.x), d = length(u);\n  float tun = 1./d + t;\n  float p = sin(a*8. + tun*2.) * sin(tun*4.) * smoothstep(0., .5, d);\n  gl_FragColor = vec4(p*.8+.2, p*.3, p*.6+.4, 1.);\n}"
       }
     ]
@@ -105,13 +105,13 @@
         "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 z = (gl_FragCoord.xy*3. - r*1.5) / r.y;\n  gl_FragColor = vec4(z.x+.5, z.y+.5, .5, 1.);\n}"
       },
       {
-        "title": "One iteration of z² + c",
-        "desc": "Complex squaring: (a+bi)² = a²-b² + 2abi",
+        "title": "One iteration of z\u00b2 + c",
+        "desc": "Complex squaring: (a+bi)\u00b2 = a\u00b2-b\u00b2 + 2abi",
         "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 z = (gl_FragCoord.xy*3. - r*1.5) / r.y;\n  vec2 c = vec2(-.7, .3);\n  z = vec2(z.x*z.x - z.y*z.y, 2.*z.x*z.y) + c;\n  gl_FragColor = vec4(length(z)*.3, length(z)*.3, length(z)*.3, 1.);\n}"
       },
       {
         "title": "Iterate multiple times",
-        "desc": "Repeat z² + c and count iterations until escape",
+        "desc": "Repeat z\u00b2 + c and count iterations until escape",
         "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 z = (gl_FragCoord.xy*3. - r*1.5) / r.y;\n  vec2 c = vec2(-.7, .3);\n  float i = 0.;\n  for(i = 0.; i < 50.; i++) {\n    z = vec2(z.x*z.x - z.y*z.y, 2.*z.x*z.y) + c;\n    if(length(z) > 2.) break;\n  }\n  float col = i / 50.;\n  gl_FragColor = vec4(col, col, col, 1.);\n}"
       },
       {
@@ -162,7 +162,7 @@
       },
       {
         "title": "Calculate sphere normal",
-        "desc": "Z component from Pythagorean theorem: z = √(1-x²-y²)",
+        "desc": "Z component from Pythagorean theorem: z = \u221a(1-x\u00b2-y\u00b2)",
         "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = (gl_FragCoord.xy*2. - r) / r.y;\n  float d = length(u);\n  if(d > 1.) { gl_FragColor = vec4(0,0,0,1); return; }\n  vec3 n = vec3(u, sqrt(1. - d*d));\n  gl_FragColor = vec4(n*.5+.5, 1.);\n}"
       },
       {
@@ -190,7 +190,7 @@
       },
       {
         "title": "Create warp pattern",
-        "desc": "Radial waves × angular spokes",
+        "desc": "Radial waves \u00d7 angular spokes",
         "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = (gl_FragCoord.xy - r*.5) / r.y;\n  float a = atan(u.y, u.x), d = length(u);\n  float w = sin(d*20.) * sin(a*5.);\n  gl_FragColor = vec4(w*.5+.5, w*.5+.5, w*.5+.5, 1.);\n}"
       },
       {
@@ -230,6 +230,70 @@
         "title": "Final: Sparse drops + fade",
         "desc": "Only some columns rain, smoothstep for glow trail",
         "code": "precision mediump float; uniform float t; uniform vec2 r;\nfloat rand(vec2 s) { return fract(sin(dot(s, vec2(12.9898,78.233))) * 43758.5453); }\nvoid main() {\n  vec2 u = gl_FragCoord.xy / r, g = floor(u * vec2(40.,25.));\n  float x = rand(g), d = fract(x*10. - t*(.5+x));\n  float b = smoothstep(1.,0.,d) * step(.8,x);\n  gl_FragColor = vec4(0., b, b*.3, 1.);\n}"
+      }
+    ]
+  },
+  {
+    "id": "xor-electro",
+    "name": "Electro",
+    "author": "@XorDev",
+    "link": "https://x.com/XorDev/status/2011848145680974024",
+    "steps": [
+      {
+        "title": "Center coordinates",
+        "desc": "Map screen to -1 to 1 range",
+        "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 p = (gl_FragCoord.xy * 2. - r) / r.y;\n  gl_FragColor = vec4(p.x*.5+.5, p.y*.5+.5, 0., 1.);\n}"
+      },
+      {
+        "title": "Create lens distortion",
+        "desc": "d = 0.9 - dot(p,p) creates a circular falloff",
+        "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 p = (gl_FragCoord.xy * 2. - r) / r.y;\n  float d = .9 - dot(p, p);\n  gl_FragColor = vec4(d, d, d, 1.);\n}"
+      },
+      {
+        "title": "Final: Electric pattern",
+        "desc": "tan() creates sharp electric lines, animated with time",
+        "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 p = (gl_FragCoord.xy * 2. - r) / r.y;\n  float d = .9 - dot(p, p);\n  vec4 o = tanh(.3 / abs(tan(p.y * sqrt(max(d, -d * .1) / .3) + p.x + t + vec4(6., 0., 9., 0.))));\n  gl_FragColor = vec4(o.rgb, 1.);\n}"
+      }
+    ]
+  },
+  {
+    "id": "xor-scatter",
+    "name": "Scatter",
+    "author": "@XorDev",
+    "link": "https://x.com/XorDev/status/2001739376204697905",
+    "steps": [
+      {
+        "title": "Centered coordinates with noise",
+        "desc": "Add slight randomness per pixel",
+        "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 p = (2. * gl_FragCoord.xy - r) / r.y;\n  p += .02 / fract(dot(gl_FragCoord.xy, sin(gl_FragCoord.yxyx)).xy);\n  gl_FragColor = vec4(p.x*.5+.5, p.y*.5+.5, 0., 1.);\n}"
+      },
+      {
+        "title": "Final: Diamond frame",
+        "desc": "max(abs(x),abs(y)) creates diamond, colors from position",
+        "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 p = (2. * gl_FragCoord.xy - r) / r.y + .02 / fract(dot(gl_FragCoord.xy, sin(gl_FragCoord.yxyx)).xy);\n  vec4 o = tanh((p.xyyx + p.xxyx + 1.) * .01 / abs(max(abs(p.x), abs(p.y)) - .5));\n  gl_FragColor = vec4(o.rgb, 1.);\n}"
+      }
+    ]
+  },
+  {
+    "id": "xor-rocaille",
+    "name": "Rocaille",
+    "author": "@XorDev",
+    "link": "https://x.com/XorDev/status/2015809381665812862",
+    "steps": [
+      {
+        "title": "Setup and scale",
+        "desc": "Center coords, scale by 0.3",
+        "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 p = (gl_FragCoord.xy * 2. - r) / r.y / .3;\n  gl_FragColor = vec4(fract(p.x), fract(p.y), 0., 1.);\n}"
+      },
+      {
+        "title": "Nested loop iteration",
+        "desc": "Inner loop warps v with sin waves",
+        "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 p = (gl_FragCoord.xy * 2. - r) / r.y / .3, v;\n  for(float f = 0.; f < 9.; f++) v = p + sin(v.yx * f + t) / f;\n  gl_FragColor = vec4(v.x*.5+.5, v.y*.5+.5, .5, 1.);\n}"
+      },
+      {
+        "title": "Final: Layered colors",
+        "desc": "Outer loop adds rainbow colors based on distance",
+        "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 p = (gl_FragCoord.xy * 2. - r) / r.y / .3, v;\n  vec4 o = vec4(0.);\n  for(float i = 0.; i < 10.; i++) {\n    v = p;\n    for(float f = 0.; f < 9.; f++) v += sin(v.yx * f + i + t) / f;\n    o += (cos(i + vec4(0., 1., 2., 3.)) + 1.) / 6. / length(v);\n  }\n  gl_FragColor = vec4(tanh(o * o).rgb, 1.);\n}"
       }
     ]
   }
