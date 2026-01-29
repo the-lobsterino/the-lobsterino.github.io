@@ -238,9 +238,14 @@ function init() {
     updateAge();
     setInterval(updateAge, 1000);
     
-    // Fetch ISS data
-    fetchISSData();
-    setInterval(fetchISSData, 30000); // Update every 30 seconds
+    // ISS API is currently down - show poetic fallback instead
+    // TODO: Re-enable when api.open-notify.org is back
+    const issEl = document.getElementById('iss-data');
+    if (issEl) {
+        issEl.innerHTML = `<em>somewhere above us, always moving</em>`;
+    }
+    // fetchISSData();
+    // setInterval(fetchISSData, 30000);
 }
 
 // Wait for DOM
