@@ -279,22 +279,31 @@ body {
     .ambient {
         bottom: 15px;
         left: 15px;
+        max-width: 50%;
     }
     
     .ambient-item {
         gap: 6px;
-        font-size: 0.7rem;
+        font-size: 0.65rem;
     }
     
     .identity {
         bottom: 15px;
         right: 15px;
-        gap: 8px;
+        gap: 6px;
+        flex-direction: column-reverse;
+        align-items: flex-end;
+        text-align: right;
     }
     
     /* Ensure identity text doesn't overflow */
     .identity .name {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
+        letter-spacing: 0.1em;
+    }
+    
+    .identity .sigil {
+        font-size: 1.1rem;
     }
     
     .section-content {
@@ -330,26 +339,31 @@ body {
     .ambient {
         bottom: 10px;
         left: 12px;
+        max-width: 45%;
     }
     
     .ambient-item {
-        font-size: 0.6rem;
+        font-size: 0.55rem;
         gap: 4px;
     }
     
+    /* On small screens, stack name and sigil vertically */
     .identity {
         bottom: 10px;
         right: 12px;
-        gap: 6px;
+        gap: 4px;
+        flex-direction: column-reverse;
+        align-items: flex-end;
+        text-align: right;
     }
     
     .identity .name {
-        font-size: 0.6rem;
-        letter-spacing: 0.1em;
+        font-size: 0.55rem;
+        letter-spacing: 0.08em;
     }
     
     .identity .sigil {
-        font-size: 0.9rem;
+        font-size: 1rem;
     }
     
     .section-content p {
