@@ -41,6 +41,25 @@ class Core {
         this.animate();
     }
 
+    createGlowTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        
+        const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+        gradient.addColorStop(0, 'rgba(255, 200, 150, 0.8)');
+        gradient.addColorStop(0.3, 'rgba(255, 120, 50, 0.4)');
+        gradient.addColorStop(0.6, 'rgba(255, 80, 30, 0.15)');
+        gradient.addColorStop(1, 'rgba(255, 50, 20, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 256, 256);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        return texture;
+    }
+
     createCore() {
         // Vertex shader - organic displacement
         const vertexShader = `
@@ -192,52 +211,30 @@ class Core {
         this.core = new THREE.Mesh(geometry, this.coreMaterial);
         this.scene.add(this.core);
 
-        // Add glow sphere behind - soft outer glow
-        const glowGeometry = new THREE.SphereGeometry(1.8, 32, 32);
-        const glowMaterial = new THREE.ShaderMaterial({
-            vertexShader: `
-                varying vec3 vNormal;
-                varying vec3 vPosition;
-                void main() {
-                    vNormal = normalize(normalMatrix * normal);
-                    vPosition = position;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
-            fragmentShader: `
-                uniform float uTime;
-                varying vec3 vNormal;
-                varying vec3 vPosition;
-                void main() {
-                    float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
-                    float pulse = sin(uTime * 0.5) * 0.1 + 0.9;
-                    vec3 color = vec3(1.0, 0.5, 0.15) * intensity * pulse;
-                    float alpha = intensity * 0.25 * pulse;
-                    gl_FragColor = vec4(color, alpha);
-                }
-            `,
-            uniforms: {
-                uTime: { value: 0 }
-            },
+        // Add glow as a simple sprite behind the core
+        const glowTexture = this.createGlowTexture();
+        const glowMaterial = new THREE.SpriteMaterial({
+            map: glowTexture,
+            color: 0xff6622,
             transparent: true,
-            side: THREE.BackSide,
             blending: THREE.AdditiveBlending,
             depthWrite: false
         });
-
-        this.glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        this.glow = new THREE.Sprite(glowMaterial);
+        this.glow.scale.set(4, 4, 1);
+        this.glow.position.z = -0.5;
         this.scene.add(this.glow);
     }
 
     createParticles() {
-        const particleCount = 200;
+        const particleCount = 150;
         const positions = new Float32Array(particleCount * 3);
         const sizes = new Float32Array(particleCount);
         const colors = new Float32Array(particleCount * 3);
 
         for (let i = 0; i < particleCount; i++) {
             // Spread particles in a sphere around the core
-            const radius = 2 + Math.random() * 4;
+            const radius = 3 + Math.random() * 6;
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
 
@@ -245,7 +242,7 @@ class Core {
             positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
             positions[i * 3 + 2] = radius * Math.cos(phi);
 
-            sizes[i] = Math.random() * 1.5 + 0.5;
+            sizes[i] = Math.random() * 0.8 + 0.2;
 
             // Ember colors
             const t = Math.random();
@@ -337,7 +334,9 @@ class Core {
         // Update uniforms
         this.coreMaterial.uniforms.uTime.value = this.time;
         this.coreMaterial.uniforms.uMouse.value.set(this.mouse.x, this.mouse.y);
-        this.glow.material.uniforms.uTime.value = this.time;
+        // Pulse glow scale
+        const glowPulse = 1 + Math.sin(this.time * 0.5) * 0.05;
+        this.glow.scale.set(4 * glowPulse, 4 * glowPulse, 1);
         this.particles.material.uniforms.uTime.value = this.time;
 
         // Subtle core rotation
