@@ -128,17 +128,19 @@ class Core {
                 
                 vec3 pos = position;
                 
-                // Organic breathing displacement
+                // Organic breathing displacement - smoother and more subtle
                 float breathe = sin(uTime * 0.8) * 0.5 + 0.5;
-                float noise1 = snoise(pos * 2.0 + uTime * 0.3);
-                float noise2 = snoise(pos * 4.0 - uTime * 0.2);
+                // Lower frequencies for smoother transitions
+                float noise1 = snoise(pos * 1.5 + uTime * 0.25);
+                float noise2 = snoise(pos * 3.0 - uTime * 0.15);
                 
                 // Mouse influence
                 float mouseInfluence = (uMouse.x * 0.1 + uMouse.y * 0.1);
                 
-                float displacement = noise1 * 0.08 + noise2 * 0.03;
-                displacement += breathe * 0.04;
-                displacement += mouseInfluence * 0.01;
+                // Reduced displacement to prevent triangle overlap
+                float displacement = noise1 * 0.05 + noise2 * 0.02;
+                displacement += breathe * 0.03;
+                displacement += mouseInfluence * 0.008;
                 
                 pos += normal * displacement;
                 vPosition = pos;
@@ -196,8 +198,8 @@ class Core {
             }
         `;
 
-        // Create geometry and material
-        const geometry = new THREE.IcosahedronGeometry(1, 64);
+        // Create geometry and material - moderate subdivision for smooth but efficient mesh
+        const geometry = new THREE.IcosahedronGeometry(1, 32);
         this.coreMaterial = new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader,
