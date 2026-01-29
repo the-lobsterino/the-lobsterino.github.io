@@ -13,7 +13,9 @@ class Core {
         // Scene setup
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.z = 2.5;
+        // Adjust camera distance based on screen size
+        const isMobile = window.innerWidth < 768;
+        this.camera.position.z = isMobile ? 3.2 : 2.5;
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ 
@@ -114,9 +116,9 @@ class Core {
                 // Mouse influence
                 float mouseInfluence = (uMouse.x * 0.1 + uMouse.y * 0.1);
                 
-                float displacement = noise1 * 0.15 + noise2 * 0.08;
-                displacement += breathe * 0.05;
-                displacement += mouseInfluence * 0.02;
+                float displacement = noise1 * 0.08 + noise2 * 0.03;
+                displacement += breathe * 0.04;
+                displacement += mouseInfluence * 0.01;
                 
                 pos += normal * displacement;
                 vPosition = pos;
@@ -301,6 +303,8 @@ class Core {
 
     onResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
+        const isMobile = window.innerWidth < 768;
+        this.camera.position.z = isMobile ? 3.2 : 2.5;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
