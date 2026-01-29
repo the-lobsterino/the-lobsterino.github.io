@@ -42,7 +42,7 @@
     .container {
       height: 100vh;
       display: grid;
-      grid-template-columns: 220px 1fr;
+      grid-template-columns: 200px 1fr 320px;
       gap: 12px;
       padding: 12px;
     }
@@ -140,21 +140,12 @@
     }
     
     /* Main content area */
-    .main {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow: hidden;
-    }
-    
     .shader-display {
-      flex: 1;
       border-radius: 14px;
       overflow: hidden;
       background: #000;
       border: 1px solid rgba(255,255,255,0.1);
       position: relative;
-      min-height: 0;
     }
     
     .shader-display canvas {
@@ -173,13 +164,12 @@
     }
     
     .info-panel {
-      height: 180px;
       background: var(--glass);
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 14px;
       backdrop-filter: blur(10px);
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
+      flex-direction: column;
       gap: 12px;
       padding: 14px;
       overflow: hidden;
@@ -187,37 +177,35 @@
     
     .code-section {
       overflow: auto;
+      flex: 1;
+      min-height: 0;
     }
     
-    .code-section h3 {
-      font-size: 0.7rem;
+    .code-section h3, .explain-section h3 {
+      font-size: 0.65rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       opacity: 0.5;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     
     .code-block {
       font-family: 'Space Mono', monospace;
-      font-size: 0.6rem;
+      font-size: 0.55rem;
       line-height: 1.5;
       color: #aaa;
       white-space: pre-wrap;
       background: rgba(0,0,0,0.3);
-      padding: 10px;
+      padding: 8px;
       border-radius: 8px;
+      max-height: 120px;
+      overflow: auto;
     }
     
     .explain-section {
       overflow-y: auto;
-    }
-    
-    .explain-section h3 {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      opacity: 0.5;
-      margin-bottom: 8px;
+      flex: 1;
+      min-height: 0;
     }
     
     .exp-item {
@@ -269,20 +257,19 @@
       <div class="shader-list" id="shaderList"></div>
     </div>
     
-    <div class="main">
-      <div class="shader-display">
-        <canvas id="mainCanvas"></canvas>
-        <div class="shader-title" id="shaderTitle">Plasma</div>
+    <div class="shader-display">
+      <canvas id="mainCanvas"></canvas>
+      <div class="shader-title" id="shaderTitle">Plasma</div>
+    </div>
+    
+    <div class="info-panel">
+      <div class="code-section">
+        <h3>Code</h3>
+        <div class="code-block" id="codeBlock"></div>
       </div>
-      <div class="info-panel">
-        <div class="code-section">
-          <h3>Code</h3>
-          <div class="code-block" id="codeBlock"></div>
-        </div>
-        <div class="explain-section">
-          <h3>How it works</h3>
-          <div id="explainBlock"></div>
-        </div>
+      <div class="explain-section">
+        <h3>How it works</h3>
+        <div id="explainBlock"></div>
       </div>
     </div>
   </div>

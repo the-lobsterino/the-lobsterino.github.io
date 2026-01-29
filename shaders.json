@@ -4,9 +4,9 @@
     "name": "Plasma",
     "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = gl_FragCoord.xy / r;\n  float v = sin(u.x*10.+t) + sin(u.y*10.+t) + sin((u.x+u.y)*10.+t);\n  gl_FragColor = vec4(v/3.*.5+.5, v/3.*.2+.2, v/3.*.4+.6, 1.);\n}",
     "explanation": [
-      {"line": "vec2 u = gl_FragCoord.xy / r;", "desc": "Normalize pixel coordinates to 0-1 range. gl_FragCoord gives the pixel position, dividing by resolution (r) maps it to UV coordinates."},
-      {"line": "float v = sin(u.x*10.+t) + sin(u.y*10.+t) + sin((u.x+u.y)*10.+t);", "desc": "Sum of 3 sine waves: horizontal, vertical, and diagonal. The *10 controls frequency, +t animates over time. Classic plasma effect from the demoscene."},
-      {"line": "gl_FragColor = vec4(v/3.*.5+.5, ...)", "desc": "Map the -3 to 3 range to colors. Divide by 3, multiply by 0.5, add 0.5 to get 0-1 range. Different multipliers per channel create the purple/pink palette."}
+      {"line": "vec2 u = gl_FragCoord.xy / r;", "desc": "Normalize pixel coords to 0-1 UV space"},
+      {"line": "sin(u.x*10.+t) + sin(u.y*10.+t) + sin((u.x+u.y)*10.+t)", "desc": "3 overlapping sine waves: horizontal, vertical, diagonal. Classic demoscene plasma."},
+      {"line": "v/3.*.5+.5", "desc": "Remap -3..3 to 0..1 for color output"}
     ]
   },
   {
@@ -14,10 +14,9 @@
     "name": "Fractal Noise",
     "code": "precision mediump float; uniform float t; uniform vec2 r;\nfloat rand(vec2 s) { return fract(sin(dot(s, vec2(12.9898,78.233))) * 43758.5453); }\nfloat noise(vec2 s) {\n  vec2 i = floor(s), f = fract(s);\n  float a = rand(i), b = rand(i+vec2(1,0)), c = rand(i+vec2(0,1)), d = rand(i+vec2(1,1));\n  vec2 u = f*f*(3.-2.*f);\n  return mix(a,b,u.x) + (c-a)*u.y*(1.-u.x) + (d-b)*u.x*u.y;\n}\nvoid main() {\n  vec2 u = gl_FragCoord.xy / r;\n  float n = noise(u*5.+t*.3) + noise(u*10.-t*.2)*.5;\n  gl_FragColor = vec4(n*.2, n*.8, n, 1.);\n}",
     "explanation": [
-      {"line": "float rand(vec2 s) { return fract(sin(dot(s, vec2(12.9898,78.233))) * 43758.5453); }", "desc": "Pseudo-random hash function. The magic numbers create chaotic output from any 2D input. fract() keeps it 0-1."},
-      {"line": "vec2 i = floor(s), f = fract(s);", "desc": "Split coordinates into integer (grid cell) and fractional (position within cell) parts."},
-      {"line": "vec2 u = f*f*(3.-2.*f);", "desc": "Smoothstep interpolation curve. Creates smooth transitions between random values instead of harsh edges."},
-      {"line": "noise(u*5.+t*.3) + noise(u*10.-t*.2)*.5", "desc": "Fractal layering (octaves): add noise at different scales. Higher frequency = less amplitude. Creates organic, cloud-like patterns."}
+      {"line": "fract(sin(dot(...)) * 43758.5453)", "desc": "Hash function: magic numbers create pseudo-random from 2D input"},
+      {"line": "f*f*(3.-2.*f)", "desc": "Smoothstep curve for interpolation between random values"},
+      {"line": "noise(u*5.) + noise(u*10.)*.5", "desc": "Fractal octaves: layer noise at different frequencies"}
     ]
   },
   {
@@ -25,10 +24,9 @@
     "name": "Tunnel",
     "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = (gl_FragCoord.xy - r*.5) / r.y;\n  float a = atan(u.y, u.x), d = length(u);\n  float tun = 1./d + t;\n  float p = sin(a*8. + tun*2.) * sin(tun*4.) * smoothstep(0., .5, d);\n  gl_FragColor = vec4(p*.8+.2, p*.3, p*.6+.4, 1.);\n}",
     "explanation": [
-      {"line": "vec2 u = (gl_FragCoord.xy - r*.5) / r.y;", "desc": "Center coordinates at screen middle, normalize by height for aspect-correct circles."},
-      {"line": "float a = atan(u.y, u.x), d = length(u);", "desc": "Convert to polar coordinates: a = angle around center, d = distance from center."},
-      {"line": "float tun = 1./d + t;", "desc": "The tunnel trick: 1/distance creates depth illusion. Adding time makes it scroll inward forever."},
-      {"line": "sin(a*8. + tun*2.) * sin(tun*4.)", "desc": "Multiply two wave patterns: angular stripes (a*8) and radial rings (tun*4). Creates the tunnel texture."}
+      {"line": "(gl_FragCoord.xy - r*.5) / r.y", "desc": "Center coords and normalize by height for aspect-correct circles"},
+      {"line": "1./d + t", "desc": "The tunnel trick: 1/distance creates infinite depth, +t scrolls inward"},
+      {"line": "sin(a*8.) * sin(tun*4.)", "desc": "Angular stripes × radial rings = tunnel texture"}
     ]
   },
   {
@@ -36,10 +34,9 @@
     "name": "Matrix Rain",
     "code": "precision mediump float; uniform float t; uniform vec2 r;\nfloat rand(vec2 s) { return fract(sin(dot(s, vec2(12.9898,78.233))) * 43758.5453); }\nvoid main() {\n  vec2 u = gl_FragCoord.xy / r, g = floor(u * vec2(40.,25.));\n  float x = rand(g), d = fract(x*10. - t*(.5+x));\n  float b = smoothstep(1.,0.,d) * step(.8,x);\n  gl_FragColor = vec4(0., b, b*.3, 1.);\n}",
     "explanation": [
-      {"line": "g = floor(u * vec2(40.,25.))", "desc": "Divide screen into 40x25 grid cells. Each cell is one potential raindrop column."},
-      {"line": "float x = rand(g)", "desc": "Random value per cell. This determines both IF a drop exists and its timing offset."},
-      {"line": "fract(x*10. - t*(.5+x))", "desc": "Animated drop position. x*10 offsets start time, t*(.5+x) varies speed per column. fract() loops 0-1."},
-      {"line": "step(.8,x)", "desc": "Only show drops where random > 0.8 (20% of columns). Creates sparse rain effect."}
+      {"line": "floor(u * vec2(40.,25.))", "desc": "Create 40×25 grid cells"},
+      {"line": "fract(x*10. - t*(.5+x))", "desc": "Animated drops with varying speed per column"},
+      {"line": "step(.8,x)", "desc": "Only 20% of columns have drops (sparse rain)"}
     ]
   },
   {
@@ -47,9 +44,9 @@
     "name": "Warp",
     "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = (gl_FragCoord.xy - r*.5) / r.y;\n  float a = atan(u.y, u.x) + t*.5, d = length(u);\n  float w = sin(d*20. - t*3.) * sin(a*5.);\n  vec3 c = .5 + .5*cos(t + d*10. + vec3(0,2,4));\n  gl_FragColor = vec4(c * (w*.5+.5), 1.);\n}",
     "explanation": [
-      {"line": "float a = atan(u.y, u.x) + t*.5", "desc": "Angle from center, slowly rotating over time. Creates the spinning motion."},
-      {"line": "sin(d*20. - t*3.) * sin(a*5.)", "desc": "Radial waves (d*20) moving outward (-t*3) multiplied by 5 angular spokes. Classic warp pattern."},
-      {"line": "vec3 c = .5 + .5*cos(t + d*10. + vec3(0,2,4))", "desc": "Rainbow palette trick: offset cosines by 0, 2, 4 radians create smooth RGB cycling. Distance adds spatial variation."}
+      {"line": "atan(u.y, u.x) + t*.5", "desc": "Angle from center, slowly rotating"},
+      {"line": "sin(d*20. - t*3.) * sin(a*5.)", "desc": "Radial waves × angular spokes"},
+      {"line": ".5 + .5*cos(t + vec3(0,2,4))", "desc": "Rainbow palette: phase-offset cosines cycle RGB"}
     ]
   },
   {
@@ -57,10 +54,89 @@
     "name": "Rings",
     "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = (gl_FragCoord.xy - r*.5) / r.y;\n  float d = length(u);\n  float ring = sin(d*30. - t*2.) * sin(d*20. + t);\n  ring = smoothstep(0., .1, abs(ring));\n  vec3 c = mix(vec3(1., .2, .5), vec3(.2, .8, 1.), d);\n  gl_FragColor = vec4(c * ring, 1.);\n}",
     "explanation": [
-      {"line": "float d = length(u);", "desc": "Distance from center. All rings are based on this single value."},
-      {"line": "sin(d*30. - t*2.) * sin(d*20. + t)", "desc": "Two ring patterns at different frequencies, moving opposite directions. Multiplication creates interference/moiré."},
-      {"line": "smoothstep(0., .1, abs(ring))", "desc": "Convert smooth waves to sharp rings. abs() makes both peaks and troughs visible, smoothstep sharpens edges."},
-      {"line": "mix(vec3(1., .2, .5), vec3(.2, .8, 1.), d)", "desc": "Gradient from pink (center) to cyan (edge) based on distance."}
+      {"line": "sin(d*30.) * sin(d*20.)", "desc": "Two ring frequencies create moiré interference"},
+      {"line": "smoothstep(0., .1, abs(ring))", "desc": "Sharpen waves into crisp rings"},
+      {"line": "mix(pink, cyan, d)", "desc": "Radial gradient from center to edge"}
+    ]
+  },
+  {
+    "id": "xor-star",
+    "name": "XorDev Star",
+    "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = (gl_FragCoord.xy*2. - r) / r.y;\n  float d = length(u), a = atan(u.y, u.x);\n  float star = abs(cos(a*5. + t)) * .3 + .1;\n  float glow = star / d;\n  vec3 c = vec3(1.,.6,.2) * glow;\n  gl_FragColor = vec4(c, 1.);\n}",
+    "explanation": [
+      {"line": "(gl_FragCoord.xy*2. - r) / r.y", "desc": "Center and normalize, *2 for -1 to 1 range"},
+      {"line": "abs(cos(a*5. + t))", "desc": "5-pointed star shape from angular cosine"},
+      {"line": "star / d", "desc": "Divide by distance for radial glow falloff"}
+    ]
+  },
+  {
+    "id": "xor-grid",
+    "name": "XorDev Grid",
+    "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = gl_FragCoord.xy / r.y - vec2(.9,.5);\n  u *= 10.;\n  vec2 g = abs(fract(u + t*.5) - .5);\n  float line = min(g.x, g.y);\n  float d = length(u) * .1;\n  gl_FragColor = vec4(vec3(.1, .8, 1.) * smoothstep(.0, .1, line) / (d + .5), 1.);\n}",
+    "explanation": [
+      {"line": "fract(u + t*.5) - .5", "desc": "Repeating 0-1 pattern, centered, animated"},
+      {"line": "min(g.x, g.y)", "desc": "Grid lines: minimum of horizontal and vertical distance"},
+      {"line": "/ (d + .5)", "desc": "Fade with distance for perspective depth"}
+    ]
+  },
+  {
+    "id": "xor-waves",
+    "name": "XorDev Waves",
+    "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = gl_FragCoord.xy / r;\n  float y = u.y + sin(u.x * 10. + t) * .1 + sin(u.x * 23. + t*1.5) * .05;\n  float wave = smoothstep(.01, .0, abs(y - .5));\n  for(float i = 1.; i < 5.; i++) {\n    float w = smoothstep(.01, .0, abs(y - .5 + sin(t+i)*.2));\n    wave += w * (1. - i*.2);\n  }\n  gl_FragColor = vec4(wave * vec3(.2, .8, 1.), 1.);\n}",
+    "explanation": [
+      {"line": "sin(u.x * 10. + t) * .1", "desc": "Primary wave oscillation"},
+      {"line": "smoothstep(.01, .0, abs(y - .5))", "desc": "Thin bright line where y crosses center"},
+      {"line": "for loop with sin(t+i)", "desc": "Multiple parallel waves with phase offset"}
+    ]
+  },
+  {
+    "id": "xor-sphere",
+    "name": "XorDev Sphere",
+    "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = (gl_FragCoord.xy*2. - r) / r.y;\n  float d = length(u);\n  if(d > 1.) { gl_FragColor = vec4(0,0,0,1); return; }\n  vec3 n = vec3(u, sqrt(1. - d*d));\n  vec3 l = normalize(vec3(sin(t), .5, cos(t)));\n  float diff = max(dot(n, l), 0.);\n  float spec = pow(max(dot(reflect(-l, n), vec3(0,0,1)), 0.), 32.);\n  gl_FragColor = vec4(vec3(.2,.4,.8)*diff + spec, 1.);\n}",
+    "explanation": [
+      {"line": "vec3(u, sqrt(1. - d*d))", "desc": "Sphere normal from circle: z from Pythagorean theorem"},
+      {"line": "normalize(vec3(sin(t), .5, cos(t)))", "desc": "Rotating light direction"},
+      {"line": "diff + spec", "desc": "Lambertian diffuse + Phong specular highlight"}
+    ]
+  },
+  {
+    "id": "xor-fire",
+    "name": "XorDev Fire",
+    "code": "precision mediump float; uniform float t; uniform vec2 r;\nfloat rand(vec2 s) { return fract(sin(dot(s, vec2(12.9898,78.233))) * 43758.5453); }\nfloat noise(vec2 s) { vec2 i = floor(s), f = fract(s); vec2 u = f*f*(3.-2.*f);\n  return mix(mix(rand(i), rand(i+vec2(1,0)), u.x), mix(rand(i+vec2(0,1)), rand(i+vec2(1,1)), u.x), u.y); }\nvoid main() {\n  vec2 u = gl_FragCoord.xy / r;\n  float n = noise(vec2(u.x*5., u.y*3. - t*2.));\n  n += noise(vec2(u.x*10., u.y*6. - t*3.)) * .5;\n  n *= (1. - u.y);\n  gl_FragColor = vec4(n*1.5, n*n*.8, n*n*n*.3, 1.);\n}",
+    "explanation": [
+      {"line": "u.y*3. - t*2.", "desc": "Scroll noise upward over time"},
+      {"line": "n *= (1. - u.y)", "desc": "Fade toward top (flames taper)"},
+      {"line": "n*1.5, n*n*.8, n*n*n", "desc": "R linear, G squared, B cubed = orange-yellow-white gradient"}
+    ]
+  },
+  {
+    "id": "xor-metaballs",
+    "name": "XorDev Metaballs",
+    "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = (gl_FragCoord.xy*2. - r) / r.y;\n  float v = 0.;\n  for(float i = 0.; i < 5.; i++) {\n    vec2 p = vec2(sin(t + i*1.3), cos(t*.7 + i*1.7)) * .5;\n    v += .1 / length(u - p);\n  }\n  v = smoothstep(.8, 1.2, v);\n  gl_FragColor = vec4(v * vec3(.8, .2, .5), 1.);\n}",
+    "explanation": [
+      {"line": "vec2(sin(t+i*1.3), cos(t*.7+i*1.7))", "desc": "5 balls orbiting with different phases"},
+      {"line": ".1 / length(u - p)", "desc": "Inverse distance field per ball"},
+      {"line": "smoothstep(.8, 1.2, v)", "desc": "Threshold the combined field for blob edges"}
+    ]
+  },
+  {
+    "id": "xor-fractal",
+    "name": "XorDev Fractal",
+    "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = (gl_FragCoord.xy*3. - r*1.5) / r.y;\n  vec2 z = u;\n  float i;\n  for(i = 0.; i < 50.; i++) {\n    z = vec2(z.x*z.x - z.y*z.y, 2.*z.x*z.y) + vec2(-.7 + sin(t*.2)*.1, .3);\n    if(length(z) > 2.) break;\n  }\n  float c = i / 50.;\n  gl_FragColor = vec4(.5+.5*cos(c*6.+vec3(0,2,4)), 1.);\n}",
+    "explanation": [
+      {"line": "z = vec2(z.x*z.x - z.y*z.y, 2.*z.x*z.y) + c", "desc": "Julia set iteration: z² + c in complex math"},
+      {"line": "vec2(-.7 + sin(t*.2)*.1, .3)", "desc": "Animated c parameter morphs the fractal"},
+      {"line": "cos(c*6.+vec3(0,2,4))", "desc": "Iteration count mapped to rainbow colors"}
+    ]
+  },
+  {
+    "id": "xor-dots",
+    "name": "XorDev Dots",
+    "code": "precision mediump float; uniform float t; uniform vec2 r;\nvoid main() {\n  vec2 u = gl_FragCoord.xy / r.y * 10.;\n  vec2 g = fract(u) - .5;\n  vec2 id = floor(u);\n  float d = length(g);\n  float size = .3 + .2 * sin(t + id.x + id.y * 1.6);\n  float c = smoothstep(size, size - .05, d);\n  gl_FragColor = vec4(c * (.5 + .5*cos(id.x*.5 + id.y*.7 + t + vec3(0,2,4))), 1.);\n}",
+    "explanation": [
+      {"line": "fract(u) - .5", "desc": "Repeating -0.5 to 0.5 cells"},
+      {"line": "sin(t + id.x + id.y*1.6)", "desc": "Animated size per dot based on grid position"},
+      {"line": "cos(id.x*.5 + id.y*.7 + t + vec3(0,2,4))", "desc": "Unique color per dot, animated"}
     ]
   }
 ]
