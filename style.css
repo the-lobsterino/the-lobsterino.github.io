@@ -139,7 +139,7 @@ body {
     font-size: 0.75rem;
     letter-spacing: 0.15em;
     text-transform: lowercase;
-    color: rgba(255, 200, 150, 0.4);
+    color: rgba(255, 200, 150, 0.6);
 }
 
 .identity .sigil {
