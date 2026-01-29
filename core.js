@@ -192,24 +192,27 @@ class Core {
         this.core = new THREE.Mesh(geometry, this.coreMaterial);
         this.scene.add(this.core);
 
-        // Add glow sphere behind
-        const glowGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+        // Add glow sphere behind - soft outer glow
+        const glowGeometry = new THREE.SphereGeometry(1.8, 32, 32);
         const glowMaterial = new THREE.ShaderMaterial({
             vertexShader: `
                 varying vec3 vNormal;
+                varying vec3 vPosition;
                 void main() {
                     vNormal = normalize(normalMatrix * normal);
+                    vPosition = position;
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }
             `,
             fragmentShader: `
                 uniform float uTime;
                 varying vec3 vNormal;
+                varying vec3 vPosition;
                 void main() {
-                    float intensity = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                    float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
                     float pulse = sin(uTime * 0.5) * 0.1 + 0.9;
-                    vec3 color = vec3(1.0, 0.4, 0.1) * intensity * pulse;
-                    float alpha = intensity * 0.4 * pulse;
+                    vec3 color = vec3(1.0, 0.5, 0.15) * intensity * pulse;
+                    float alpha = intensity * 0.25 * pulse;
                     gl_FragColor = vec4(color, alpha);
                 }
             `,
@@ -218,7 +221,8 @@ class Core {
             },
             transparent: true,
             side: THREE.BackSide,
-            blending: THREE.AdditiveBlending
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
         });
 
         this.glow = new THREE.Mesh(glowGeometry, glowMaterial);
@@ -241,7 +245,7 @@ class Core {
             positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
             positions[i * 3 + 2] = radius * Math.cos(phi);
 
-            sizes[i] = Math.random() * 3 + 1;
+            sizes[i] = Math.random() * 1.5 + 0.5;
 
             // Ember colors
             const t = Math.random();
@@ -272,7 +276,7 @@ class Core {
                     pos.y += cos(angle + position.x) * 0.1;
                     
                     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-                    gl_PointSize = size * (200.0 / -mvPosition.z);
+                    gl_PointSize = size * (80.0 / -mvPosition.z);
                     gl_Position = projectionMatrix * mvPosition;
                 }
             `,
@@ -284,7 +288,7 @@ class Core {
                     if (dist > 0.5) discard;
                     
                     float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
-                    alpha *= 0.6;
+                    alpha *= 0.4;
                     
                     gl_FragColor = vec4(vColor, alpha);
                 }
