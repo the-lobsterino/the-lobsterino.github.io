@@ -198,8 +198,8 @@ class Core {
             }
         `;
 
-        // Create geometry and material - moderate subdivision for smooth but efficient mesh
-        const geometry = new THREE.IcosahedronGeometry(1, 32);
+        // Use SphereGeometry instead - more reliable topology
+        const geometry = new THREE.SphereGeometry(1, 48, 48);
         this.coreMaterial = new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader,
