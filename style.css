@@ -397,15 +397,56 @@ body {
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
     .core {
-        width: 150px;
-        height: 150px;
+        width: 140px;
+        height: 140px;
     }
     
     .fragment {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
+        padding: 12px 8px; /* Better touch targets */
     }
     
-    .fragment-1 { top: 20%; left: 10%; }
-    .fragment-2 { top: 75%; right: 10%; }
-    .fragment-3 { top: 35%; right: 8%; }
+    .fragment-1 { top: 15%; left: 5%; }
+    .fragment-2 { top: 78%; right: 5%; }
+    .fragment-3 { top: 38%; right: 3%; }
+    
+    .ambient {
+        bottom: 20px;
+        left: 15px;
+    }
+    
+    .identity {
+        bottom: 20px;
+        right: 15px;
+    }
+    
+    .section-content {
+        padding: 30px 20px;
+        margin: 0 15px;
+    }
+    
+    .section-content p {
+        font-size: 1rem;
+        line-height: 1.7;
+    }
+    
+    .section-content .close {
+        font-size: 2rem; /* Bigger touch target */
+        padding: 10px;
+    }
+}
+
+@media (max-width: 400px) {
+    .core {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .ambient-item {
+        font-size: 0.7rem;
+    }
+    
+    .identity .name {
+        font-size: 0.7rem;
+    }
 }
