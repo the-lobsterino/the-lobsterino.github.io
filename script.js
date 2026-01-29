@@ -186,15 +186,26 @@ document.addEventListener('keydown', (e) => {
 });
 
 // === ISS DATA ===
+let issRetryCount = 0;
+const MAX_ISS_RETRIES = 2;
+
 async function fetchISSData() {
     const issEl = document.getElementById('iss-data');
     if (!issEl) return;
+    
+    // Don't keep retrying if API is down
+    if (issRetryCount >= MAX_ISS_RETRIES) {
+        return;
+    }
 
     try {
-        // Using a CORS-friendly approach
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        
         const response = await fetch('https://api.open-notify.org/iss-now.json', {
-            mode: 'cors'
+            signal: controller.signal
         });
+        clearTimeout(timeout);
         
         if (!response.ok) throw new Error('ISS API error');
         
@@ -207,8 +218,10 @@ async function fetchISSData() {
         const lonLabel = lon >= 0 ? 'E' : 'W';
         
         issEl.innerHTML = `ISS at ${Math.abs(lat)}°${latLabel}, ${Math.abs(lon)}°${lonLabel}<br><small style="opacity:0.5">orbiting at 17,000 mph</small>`;
+        issRetryCount = 0; // Reset on success
     } catch (err) {
-        // Fallback: show poetic placeholder
+        issRetryCount++;
+        // Poetic fallback - don't spam console with errors
         issEl.innerHTML = `<em>somewhere above us, always moving</em>`;
     }
 }
