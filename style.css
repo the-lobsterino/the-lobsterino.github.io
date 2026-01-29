@@ -132,6 +132,7 @@ body {
     align-items: center;
     gap: 12px;
     pointer-events: none;
+    max-width: calc(100% - 60px);
 }
 
 .identity .name {
@@ -145,6 +146,7 @@ body {
     font-size: 1.2rem;
     opacity: 0.6;
     transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
 .identity:hover .sigil {
@@ -269,31 +271,30 @@ body {
         padding: 12px 8px;
     }
     
-    /* Repositioned fragments to be visible on mobile */
-    .fragment-1 { top: 15%; left: 8%; }
-    .fragment-2 { bottom: 18%; right: auto; left: 8%; top: auto; }
-    .fragment-3 { top: 25%; right: auto; left: 8%; }
+    /* Stack all fragments on the left side for mobile */
+    .fragment-1 { top: 12%; left: 15px; right: auto; }
+    .fragment-2 { top: auto; bottom: 22%; left: 15px; right: auto; }
+    .fragment-3 { top: 22%; left: 15px; right: auto; }
     
     .ambient {
         bottom: 15px;
-        left: 12px;
+        left: 15px;
     }
     
     .ambient-item {
         gap: 6px;
+        font-size: 0.7rem;
     }
     
     .identity {
         bottom: 15px;
-        right: 12px;
+        right: 15px;
+        gap: 8px;
     }
     
     /* Ensure identity text doesn't overflow */
     .identity .name {
-        max-width: 100px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        font-size: 0.7rem;
     }
     
     .section-content {
@@ -318,39 +319,41 @@ body {
 
 @media (max-width: 400px) {
     .fragment {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
+        padding: 10px 6px;
     }
     
-    .fragment-1 { top: 12%; left: 5%; }
-    .fragment-2 { bottom: 15%; left: 5%; top: auto; right: auto; }
-    .fragment-3 { top: 22%; left: 5%; right: auto; }
+    .fragment-1 { top: 10%; left: 12px; }
+    .fragment-2 { bottom: 20%; left: 12px; top: auto; right: auto; }
+    .fragment-3 { top: 18%; left: 12px; right: auto; }
     
     .ambient {
-        bottom: 12px;
-        left: 10px;
+        bottom: 10px;
+        left: 12px;
     }
     
     .ambient-item {
-        font-size: 0.65rem;
-        gap: 5px;
+        font-size: 0.6rem;
+        gap: 4px;
     }
     
     .identity {
-        bottom: 12px;
-        right: 10px;
+        bottom: 10px;
+        right: 12px;
+        gap: 6px;
     }
     
     .identity .name {
-        font-size: 0.65rem;
-        max-width: 80px;
+        font-size: 0.6rem;
+        letter-spacing: 0.1em;
     }
     
     .identity .sigil {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
     
     .section-content p {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
     }
 }
 
