@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shader Journey 🦞 | The Lobsterino</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Barra lateral con lista de shaders -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1>🦞 Shader Journey</h1>
+        <p class="subtitle">De cero a raymarching</p>
+      </div>
+      
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      
+      <nav class="shader-list" id="shaderList">
+        <!-- Se llena dinámicamente -->
+      </nav>
+      
+      <div class="sidebar-footer">
+        <button class="btn-secondary" id="resetProgress">🔄 Reiniciar</button>
+        <a href="../index.html" class="btn-home">← Volver al Santuario</a>
+      </div>
+    </aside>
+
+    <!-- Área principal con shader y explicación -->
+    <main class="main-content">
+      <div class="shader-container">
+        <div class="shader-header">
+          <div class="shader-info">
+            <h2 id="shaderName">Selecciona un shader</h2>
+            <span class="difficulty-badge" id="difficultyBadge"></span>
+          </div>
+          <div class="shader-controls">
+            <button class="btn-icon" id="playPauseBtn" title="Play/Pause">⏸️</button>
+            <button class="btn-icon" id="fullscreenBtn" title="Fullscreen">⛶</button>
+          </div>
+        </div>
+
+        <!-- Canvas WebGL -->
+        <div class="canvas-wrapper">
+          <canvas id="glCanvas"></canvas>
+          <div class="canvas-overlay" id="canvasOverlay">
+            <p>👈 Selecciona un shader para empezar</p>
+          </div>
+        </div>
+
+        <!-- Explicación -->
+        <div class="explanation-panel" id="explanationPanel">
+          <div class="concepts" id="concepts"></div>
+          <p id="explanation"></p>
+        </div>
+      </div>
+
+      <!-- Editor de código -->
+      <div class="code-section">
+        <div class="code-header">
+          <h3>📝 Código GLSL</h3>
+          <button class="btn-secondary btn-copy" id="copyCodeBtn">Copiar</button>
+        </div>
+        <pre><code id="shaderCode" class="glsl">// El código del shader aparecerá aquí</code></pre>
+      </div>
+
+      <!-- Navegación -->
+      <div class="navigation">
+        <button class="btn-nav" id="prevBtn" disabled>← Anterior</button>
+        <button class="btn-primary" id="nextBtn">Siguiente →</button>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

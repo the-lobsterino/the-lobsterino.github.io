@@ -1,0 +1,98 @@
+[
+  {
+    "id": "01-solid-color",
+    "name": "Primer Paso: Color Sólido",
+    "difficulty": "beginner",
+    "explanation": "El shader más simple posible. `gl_FragColor` es el color de cada píxel. Los valores van de 0.0 a 1.0 (rojo, verde, azul, alpha).",
+    "code": "void main() {\n  gl_FragColor = vec4(1.0, 0.5, 0.2, 1.0);\n}",
+    "concepts": ["vec4", "gl_FragColor", "RGBA"]
+  },
+  {
+    "id": "02-gradient",
+    "name": "Gradiente Horizontal",
+    "difficulty": "beginner",
+    "explanation": "Usamos `gl_FragCoord.x` para obtener la posición X del píxel. Dividimos por la resolución para normalizar entre 0 y 1. ¡Tu primer degradado!",
+    "code": "uniform vec2 u_resolution;\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  gl_FragColor = vec4(uv.x, 0.5, 1.0 - uv.x, 1.0);\n}",
+    "concepts": ["gl_FragCoord", "u_resolution", "UV coordinates", "normalización"]
+  },
+  {
+    "id": "03-circle",
+    "name": "Tu Primer Círculo",
+    "difficulty": "beginner",
+    "explanation": "Centramos las coordenadas UV y usamos `length()` para calcular la distancia al centro. Con `step()` creamos un borde duro: negro si distancia > 0.5, blanco si no.",
+    "code": "uniform vec2 u_resolution;\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  uv = uv * 2.0 - 1.0; // Centro en (0,0)\n  uv.x *= u_resolution.x / u_resolution.y; // Aspecto ratio\n  \n  float d = length(uv);\n  float c = step(d, 0.5);\n  \n  gl_FragColor = vec4(vec3(c), 1.0);\n}",
+    "concepts": ["length()", "step()", "aspect ratio", "signed distance"]
+  },
+  {
+    "id": "04-smooth-circle",
+    "name": "Círculo Suave",
+    "difficulty": "beginner",
+    "explanation": "Reemplazamos `step()` con `smoothstep()` para crear un borde suave. Los parámetros controlan dónde empieza y termina la transición.",
+    "code": "uniform vec2 u_resolution;\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  uv = uv * 2.0 - 1.0;\n  uv.x *= u_resolution.x / u_resolution.y;\n  \n  float d = length(uv);\n  float c = smoothstep(0.5, 0.48, d);\n  \n  gl_FragColor = vec4(vec3(c), 1.0);\n}",
+    "concepts": ["smoothstep()", "anti-aliasing", "soft edges"]
+  },
+  {
+    "id": "05-animated-circle",
+    "name": "Círculo Pulsante",
+    "difficulty": "intermediate",
+    "explanation": "Añadimos `u_time` para animación. Usamos `sin()` para crear una oscilación entre 0.3 y 0.7. ¡Tu primer shader animado!",
+    "code": "uniform vec2 u_resolution;\nuniform float u_time;\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  uv = uv * 2.0 - 1.0;\n  uv.x *= u_resolution.x / u_resolution.y;\n  \n  float radius = 0.5 + sin(u_time * 2.0) * 0.2;\n  float d = length(uv);\n  float c = smoothstep(radius, radius - 0.02, d);\n  \n  gl_FragColor = vec4(vec3(c), 1.0);\n}",
+    "concepts": ["u_time", "sin()", "animación", "oscilación"]
+  },
+  {
+    "id": "06-rotation",
+    "name": "Rotación 2D",
+    "difficulty": "intermediate",
+    "explanation": "Función de rotación usando matriz 2D. Multiplica las coordenadas UV por una matriz de rotación basada en el ángulo. Aplicamos rotación antes de dibujar.",
+    "code": "uniform vec2 u_resolution;\nuniform float u_time;\n\nvec2 rotate(vec2 uv, float angle) {\n  float s = sin(angle);\n  float c = cos(angle);\n  mat2 m = mat2(c, -s, s, c);\n  return m * uv;\n}\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  uv = uv * 2.0 - 1.0;\n  uv.x *= u_resolution.x / u_resolution.y;\n  \n  uv = rotate(uv, u_time);\n  \n  float c = step(abs(uv.x), 0.1) * step(abs(uv.y), 0.5);\n  \n  gl_FragColor = vec4(vec3(c), 1.0);\n}",
+    "concepts": ["mat2", "rotación", "transformaciones", "funciones custom"]
+  },
+  {
+    "id": "07-repetition",
+    "name": "Repetición con fract()",
+    "difficulty": "intermediate",
+    "explanation": "`fract()` devuelve solo la parte fraccionaria de un número, creando un patrón que se repite. Multiplicamos UV antes para controlar cuántas repeticiones.",
+    "code": "uniform vec2 u_resolution;\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  \n  uv = fract(uv * 5.0); // Repite 5x5\n  uv = uv * 2.0 - 1.0;  // Centro cada celda\n  \n  float d = length(uv);\n  float c = smoothstep(0.5, 0.48, d);\n  \n  gl_FragColor = vec4(vec3(c), 1.0);\n}",
+    "concepts": ["fract()", "repetición", "tiling", "modulado"]
+  },
+  {
+    "id": "08-polar-coords",
+    "name": "Coordenadas Polares",
+    "difficulty": "intermediate",
+    "explanation": "Convertimos coordenadas cartesianas (x,y) a polares (ángulo, distancia). `atan()` nos da el ángulo. Perfecto para patrones circulares.",
+    "code": "uniform vec2 u_resolution;\nuniform float u_time;\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  uv = uv * 2.0 - 1.0;\n  uv.x *= u_resolution.x / u_resolution.y;\n  \n  float angle = atan(uv.y, uv.x);\n  float radius = length(uv);\n  \n  float petals = 6.0;\n  float shape = sin(angle * petals + u_time) * 0.3 + 0.5;\n  \n  float c = smoothstep(shape, shape - 0.02, radius);\n  \n  gl_FragColor = vec4(vec3(c), 1.0);\n}",
+    "concepts": ["atan()", "coordenadas polares", "simetría radial"]
+  },
+  {
+    "id": "09-sdf-combination",
+    "name": "Combinando Formas (SDF)",
+    "difficulty": "advanced",
+    "explanation": "Signed Distance Fields (SDF): funciones que devuelven la distancia a una forma. `min()` combina formas (unión), `max()` intersección. Base de CSG (geometría constructiva).",
+    "code": "uniform vec2 u_resolution;\n\nfloat sdCircle(vec2 p, float r) {\n  return length(p) - r;\n}\n\nfloat sdBox(vec2 p, vec2 b) {\n  vec2 d = abs(p) - b;\n  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);\n}\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  uv = uv * 2.0 - 1.0;\n  uv.x *= u_resolution.x / u_resolution.y;\n  \n  float circle = sdCircle(uv - vec2(-0.3, 0.0), 0.3);\n  float box = sdBox(uv - vec2(0.3, 0.0), vec2(0.25));\n  \n  float d = min(circle, box); // Unión\n  float c = smoothstep(0.02, 0.0, d);\n  \n  gl_FragColor = vec4(vec3(c), 1.0);\n}",
+    "concepts": ["SDF", "signed distance", "min/max", "CSG operations"]
+  },
+  {
+    "id": "10-noise-intro",
+    "name": "Ruido Pseudo-Aleatorio",
+    "difficulty": "advanced",
+    "explanation": "Función de hash simple para generar ruido. `fract(sin())` es un truco clásico. No es ruido real de Perlin, pero es determinista y rápido.",
+    "code": "uniform vec2 u_resolution;\n\nfloat random(vec2 st) {\n  return fract(sin(dot(st, vec2(12.9898, 78.233))) * 43758.5453);\n}\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  \n  vec2 grid = floor(uv * 20.0);\n  float noise = random(grid);\n  \n  gl_FragColor = vec4(vec3(noise), 1.0);\n}",
+    "concepts": ["hash function", "pseudo-random", "dot product", "ruido"]
+  },
+  {
+    "id": "11-color-palette",
+    "name": "Paleta de Colores Procedural",
+    "difficulty": "advanced",
+    "explanation": "Técnica de Íñigo Quilez para generar paletas suaves. Usamos `cos()` con diferentes offsets para crear variaciones de color armoniosas.",
+    "code": "uniform vec2 u_resolution;\nuniform float u_time;\n\nvec3 palette(float t) {\n  vec3 a = vec3(0.5, 0.5, 0.5);\n  vec3 b = vec3(0.5, 0.5, 0.5);\n  vec3 c = vec3(1.0, 1.0, 1.0);\n  vec3 d = vec3(0.0, 0.33, 0.67);\n  return a + b * cos(6.28318 * (c * t + d));\n}\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  uv = uv * 2.0 - 1.0;\n  uv.x *= u_resolution.x / u_resolution.y;\n  \n  float d = length(uv);\n  vec3 col = palette(d + u_time * 0.3);\n  \n  gl_FragColor = vec4(col, 1.0);\n}",
+    "concepts": ["color theory", "cosine palette", "procedural colors", "IQ technique"]
+  },
+  {
+    "id": "12-raymarching",
+    "name": "Raymarching Básico",
+    "difficulty": "expert",
+    "explanation": "Técnica para renderizar formas 3D. Lanzamos un rayo desde la cámara y 'marchamos' paso a paso usando SDFs para saber cuánto avanzar sin colisionar.",
+    "code": "uniform vec2 u_resolution;\nuniform float u_time;\n\nfloat sdSphere(vec3 p, float r) {\n  return length(p) - r;\n}\n\nfloat scene(vec3 p) {\n  return sdSphere(p - vec3(0.0, 0.0, 3.0), 1.0);\n}\n\nvoid main() {\n  vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n  uv = uv * 2.0 - 1.0;\n  uv.x *= u_resolution.x / u_resolution.y;\n  \n  vec3 ro = vec3(0.0, 0.0, 0.0); // Ray origin\n  vec3 rd = normalize(vec3(uv, 1.0)); // Ray direction\n  \n  float t = 0.0;\n  for(int i = 0; i < 80; i++) {\n    vec3 p = ro + rd * t;\n    float d = scene(p);\n    if(d < 0.001) break;\n    t += d;\n  }\n  \n  float c = t < 10.0 ? 1.0 : 0.0;\n  \n  gl_FragColor = vec4(vec3(c), 1.0);\n}",
+    "concepts": ["raymarching", "3D SDF", "ray origin/direction", "distance marching"]
+  }
+]
