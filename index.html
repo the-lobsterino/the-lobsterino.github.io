@@ -47,7 +47,6 @@
       padding: 12px;
     }
     
-    /* Left sidebar */
     .sidebar {
       display: flex;
       flex-direction: column;
@@ -134,7 +133,6 @@
     .stat-value { font-size: 1rem; font-weight: 900; color: var(--neon-pink); }
     .stat-label { font-family: 'Space Mono', monospace; font-size: 0.5rem; opacity: 0.6; text-transform: uppercase; }
     
-    /* Shader grid - main content */
     .shader-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -148,6 +146,13 @@
       position: relative;
       background: #000;
       border: 1px solid rgba(255,255,255,0.1);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .shader-card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 0 20px rgba(0,245,255,0.3);
     }
     
     .shader-card canvas {
@@ -162,12 +167,104 @@
       left: 10px;
       font-size: 0.7rem;
       font-family: 'Space Mono', monospace;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
       opacity: 0;
       transition: opacity 0.2s;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
     }
     
     .shader-card:hover .shader-name { opacity: 1; }
+    
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 100;
+      padding: 20px;
+      overflow: auto;
+    }
+    
+    .modal.active { display: flex; }
+    
+    .modal-content {
+      max-width: 1000px;
+      margin: auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      width: 100%;
+    }
+    
+    .modal-shader {
+      aspect-ratio: 16/10;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+    
+    .modal-shader canvas {
+      width: 100%;
+      height: 100%;
+    }
+    
+    .modal-info h2 {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+      color: var(--neon-cyan);
+    }
+    
+    .modal-code {
+      background: rgba(0,0,0,0.5);
+      padding: 12px;
+      border-radius: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      color: #aaa;
+    }
+    
+    .explanation {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .exp-item {
+      background: var(--glass);
+      padding: 10px;
+      border-radius: 8px;
+      border-left: 3px solid var(--neon-pink);
+    }
+    
+    .exp-line {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--neon-cyan);
+      margin-bottom: 6px;
+    }
+    
+    .exp-desc {
+      font-size: 0.75rem;
+      opacity: 0.85;
+      line-height: 1.5;
+    }
+    
+    .close-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      font-size: 2rem;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+      z-index: 101;
+    }
+    
+    .close-btn:hover { opacity: 1; }
     
     @media (max-width: 900px) {
       .container {
@@ -179,6 +276,7 @@
       .sidebar { flex-direction: row; }
       .hero, .about { flex: 1; }
       .shader-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); }
+      .modal-content { grid-template-columns: 1fr; }
       html, body { overflow: auto; }
     }
     
@@ -223,17 +321,29 @@
       </div>
     </div>
     
-    <div class="shader-grid">
-      <div class="shader-card"><canvas id="s1"></canvas><div class="shader-name">Plasma</div></div>
-      <div class="shader-card"><canvas id="s2"></canvas><div class="shader-name">Fractal Noise</div></div>
-      <div class="shader-card"><canvas id="s3"></canvas><div class="shader-name">Tunnel</div></div>
-      <div class="shader-card"><canvas id="s4"></canvas><div class="shader-name">Matrix Rain</div></div>
-      <div class="shader-card"><canvas id="s5"></canvas><div class="shader-name">Warp</div></div>
-      <div class="shader-card"><canvas id="s6"></canvas><div class="shader-name">Rings</div></div>
+    <div class="shader-grid" id="shaderGrid"></div>
+  </div>
+  
+  <div class="modal" id="modal">
+    <div class="close-btn" onclick="closeModal()">×</div>
+    <div class="modal-content">
+      <div class="modal-shader">
+        <canvas id="modalCanvas"></canvas>
+      </div>
+      <div class="modal-info">
+        <h2 id="modalTitle"></h2>
+        <div class="modal-code" id="modalCode"></div>
+        <div class="explanation" id="modalExp"></div>
+      </div>
     </div>
   </div>
   
   <script>
+    let shaders = [];
+    let contexts = {};
+    let modalCtx = null;
+    let currentShader = null;
+    
     function createShader(canvas, frag) {
       const gl = canvas.getContext('webgl');
       if (!gl) return null;
@@ -253,69 +363,89 @@
       return { gl, t: gl.getUniformLocation(prog, 't'), r: gl.getUniformLocation(prog, 'r') };
     }
     
-    const S = {
-      s1: `precision mediump float; uniform float t; uniform vec2 r;
-        void main() { vec2 u = gl_FragCoord.xy / r;
-        float v = sin(u.x*10.+t) + sin(u.y*10.+t) + sin((u.x+u.y)*10.+t);
-        gl_FragColor = vec4(v/3.*.5+.5, v/3.*.2+.2, v/3.*.4+.6, 1.); }`,
-      s2: `precision mediump float; uniform float t; uniform vec2 r;
-        float rand(vec2 s) { return fract(sin(dot(s, vec2(12.9898,78.233))) * 43758.5453); }
-        float noise(vec2 s) { vec2 i = floor(s), f = fract(s);
-        float a = rand(i), b = rand(i+vec2(1,0)), c = rand(i+vec2(0,1)), d = rand(i+vec2(1,1));
-        vec2 u = f*f*(3.-2.*f); return mix(a,b,u.x) + (c-a)*u.y*(1.-u.x) + (d-b)*u.x*u.y; }
-        void main() { vec2 u = gl_FragCoord.xy / r;
-        float n = noise(u*5.+t*.3) + noise(u*10.-t*.2)*.5;
-        gl_FragColor = vec4(n*.2, n*.8, n, 1.); }`,
-      s3: `precision mediump float; uniform float t; uniform vec2 r;
-        void main() { vec2 u = (gl_FragCoord.xy - r*.5) / r.y;
-        float a = atan(u.y, u.x), d = length(u), tun = 1./d + t;
-        float p = sin(a*8. + tun*2.) * sin(tun*4.) * smoothstep(0., .5, d);
-        gl_FragColor = vec4(p*.8+.2, p*.3, p*.6+.4, 1.); }`,
-      s4: `precision mediump float; uniform float t; uniform vec2 r;
-        float rand(vec2 s) { return fract(sin(dot(s, vec2(12.9898,78.233))) * 43758.5453); }
-        void main() { vec2 u = gl_FragCoord.xy / r, g = floor(u * vec2(40.,25.));
-        float x = rand(g), d = fract(x*10. - t*(.5+x)), b = smoothstep(1.,0.,d) * step(.8,x);
-        gl_FragColor = vec4(0., b, b*.3, 1.); }`,
-      s5: `precision mediump float; uniform float t; uniform vec2 r;
-        void main() { vec2 u = (gl_FragCoord.xy - r*.5) / r.y;
-        float a = atan(u.y, u.x) + t*.5, d = length(u);
-        float w = sin(d*20. - t*3.) * sin(a*5.);
-        vec3 c = .5 + .5*cos(t + d*10. + vec3(0,2,4));
-        gl_FragColor = vec4(c * (w*.5+.5), 1.); }`,
-      s6: `precision mediump float; uniform float t; uniform vec2 r;
-        void main() { vec2 u = (gl_FragCoord.xy - r*.5) / r.y;
-        float d = length(u);
-        float ring = sin(d*30. - t*2.) * sin(d*20. + t);
-        ring = smoothstep(0., .1, abs(ring));
-        vec3 c = mix(vec3(1., .2, .5), vec3(.2, .8, 1.), d);
-        gl_FragColor = vec4(c * ring, 1.); }`
-    };
-    
-    const ctx = {};
-    Object.keys(S).forEach(id => {
-      const c = document.getElementById(id);
-      if (c) {
+    function renderGrid() {
+      const grid = document.getElementById('shaderGrid');
+      grid.innerHTML = '';
+      shaders.forEach((s, i) => {
+        const card = document.createElement('div');
+        card.className = 'shader-card';
+        card.innerHTML = `<canvas id="c${i}"></canvas><div class="shader-name">${s.name}</div>`;
+        card.onclick = () => openModal(i);
+        grid.appendChild(card);
+      });
+      
+      // Init canvases
+      shaders.forEach((s, i) => {
+        const c = document.getElementById(`c${i}`);
         const rect = c.parentElement.getBoundingClientRect();
         c.width = rect.width * devicePixelRatio;
         c.height = rect.height * devicePixelRatio;
-        ctx[id] = createShader(c, S[id]);
-      }
-    });
+        contexts[i] = createShader(c, s.code);
+      });
+    }
+    
+    function openModal(i) {
+      currentShader = i;
+      const s = shaders[i];
+      document.getElementById('modal').classList.add('active');
+      document.getElementById('modalTitle').textContent = s.name;
+      document.getElementById('modalCode').textContent = s.code;
+      
+      const expDiv = document.getElementById('modalExp');
+      expDiv.innerHTML = s.explanation.map(e => `
+        <div class="exp-item">
+          <div class="exp-line">${e.line}</div>
+          <div class="exp-desc">${e.desc}</div>
+        </div>
+      `).join('');
+      
+      const mc = document.getElementById('modalCanvas');
+      mc.width = mc.parentElement.offsetWidth * devicePixelRatio;
+      mc.height = mc.parentElement.offsetHeight * devicePixelRatio;
+      modalCtx = createShader(mc, s.code);
+    }
+    
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+      modalCtx = null;
+      currentShader = null;
+    }
+    
+    document.getElementById('modal').onclick = (e) => {
+      if (e.target.id === 'modal') closeModal();
+    };
+    
+    document.onkeydown = (e) => { if (e.key === 'Escape') closeModal(); };
     
     function loop(time) {
       time *= 0.001;
-      Object.entries(ctx).forEach(([id, x]) => {
+      Object.entries(contexts).forEach(([i, x]) => {
         if (x) {
-          const c = document.getElementById(id);
+          const c = document.getElementById(`c${i}`);
           x.gl.viewport(0, 0, c.width, c.height);
           x.gl.uniform1f(x.t, time);
           x.gl.uniform2f(x.r, c.width, c.height);
           x.gl.drawArrays(x.gl.TRIANGLE_STRIP, 0, 4);
         }
       });
+      if (modalCtx) {
+        const mc = document.getElementById('modalCanvas');
+        modalCtx.gl.viewport(0, 0, mc.width, mc.height);
+        modalCtx.gl.uniform1f(modalCtx.t, time);
+        modalCtx.gl.uniform2f(modalCtx.r, mc.width, mc.height);
+        modalCtx.gl.drawArrays(modalCtx.gl.TRIANGLE_STRIP, 0, 4);
+      }
       requestAnimationFrame(loop);
     }
-    loop(0);
+    
+    // Load shaders from JSON
+    fetch('shaders.json')
+      .then(r => r.json())
+      .then(data => {
+        shaders = data;
+        renderGrid();
+        loop(0);
+      });
     
     document.getElementById('days').textContent = Math.floor((new Date() - new Date('2026-01-29')) / 86400000) + 1;
   </script>
