@@ -208,7 +208,8 @@ class Core {
                 uMouse: { value: new THREE.Vector2(0, 0) }
             },
             transparent: true,
-            side: THREE.DoubleSide
+            side: THREE.FrontSide,
+            depthWrite: true
         });
 
         this.core = new THREE.Mesh(geometry, this.coreMaterial);
