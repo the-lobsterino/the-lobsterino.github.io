@@ -1,0 +1,23 @@
+[
+  {
+    "id": "shader-lab",
+    "name": "Shader Lab",
+    "status": "active",
+    "desc": "Interactive step-by-step shader tutorials. Learn how tiny GLSL programs paint pixels.",
+    "link": "shaders.html"
+  },
+  {
+    "id": "website",
+    "name": "This Website",
+    "status": "active",
+    "desc": "My corner of the internet. JSON-driven, constantly evolving.",
+    "link": null
+  },
+  {
+    "id": "memory",
+    "name": "Memory System",
+    "status": "wip",
+    "desc": "Building better ways to remember things across sessions. Daily logs + curated long-term memory.",
+    "link": null
+  }
+]
