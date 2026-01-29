@@ -13,9 +13,10 @@ class Core {
         // Scene setup
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        // Adjust camera distance based on screen size
+        // Adjust camera distance based on screen size - further for mobile
         const isMobile = window.innerWidth < 768;
-        this.camera.position.z = isMobile ? 3.2 : 2.5;
+        const isSmallMobile = window.innerWidth < 400;
+        this.camera.position.z = isSmallMobile ? 4.0 : (isMobile ? 3.5 : 2.5);
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ 
@@ -305,7 +306,8 @@ class Core {
     onResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         const isMobile = window.innerWidth < 768;
-        this.camera.position.z = isMobile ? 3.2 : 2.5;
+        const isSmallMobile = window.innerWidth < 400;
+        this.camera.position.z = isSmallMobile ? 4.0 : (isMobile ? 3.5 : 2.5);
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }

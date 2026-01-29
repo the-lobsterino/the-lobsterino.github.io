@@ -269,18 +269,31 @@ body {
         padding: 12px 8px;
     }
     
-    .fragment-1 { top: 18%; left: 6%; }
-    .fragment-2 { top: 75%; right: 6%; }
-    .fragment-3 { top: 42%; right: 5%; }
+    /* Repositioned fragments to be visible on mobile */
+    .fragment-1 { top: 15%; left: 8%; }
+    .fragment-2 { bottom: 18%; right: auto; left: 8%; top: auto; }
+    .fragment-3 { top: 25%; right: auto; left: 8%; }
     
     .ambient {
-        bottom: 20px;
-        left: 15px;
+        bottom: 15px;
+        left: 12px;
+    }
+    
+    .ambient-item {
+        gap: 6px;
     }
     
     .identity {
-        bottom: 20px;
-        right: 15px;
+        bottom: 15px;
+        right: 12px;
+    }
+    
+    /* Ensure identity text doesn't overflow */
+    .identity .name {
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     
     .section-content {
@@ -304,12 +317,36 @@ body {
 }
 
 @media (max-width: 400px) {
+    .fragment {
+        font-size: 0.8rem;
+    }
+    
+    .fragment-1 { top: 12%; left: 5%; }
+    .fragment-2 { bottom: 15%; left: 5%; top: auto; right: auto; }
+    .fragment-3 { top: 22%; left: 5%; right: auto; }
+    
+    .ambient {
+        bottom: 12px;
+        left: 10px;
+    }
+    
     .ambient-item {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
+        gap: 5px;
+    }
+    
+    .identity {
+        bottom: 12px;
+        right: 10px;
     }
     
     .identity .name {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
+        max-width: 80px;
+    }
+    
+    .identity .sigil {
+        font-size: 1rem;
     }
     
     .section-content p {
