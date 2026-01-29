@@ -198,8 +198,8 @@ class Core {
             }
         `;
 
-        // Use SphereGeometry instead - more reliable topology
-        const geometry = new THREE.SphereGeometry(1, 48, 48);
+        // IcosahedronGeometry with moderate subdivision like in tutorials
+        const geometry = new THREE.IcosahedronGeometry(1, 30);
         this.coreMaterial = new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader,
