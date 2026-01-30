@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Atmosphere Shader Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        h1 {
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        .demo-container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .demo-box {
+            text-align: center;
+        }
+        .demo-box h3 {
+            margin-bottom: 10px;
+            color: #888;
+        }
+        canvas {
+            border: 2px solid #333;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .controls {
+            background: #252540;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 400px;
+            width: 100%;
+        }
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .control-row label {
+            flex: 1;
+        }
+        .control-row input[type="range"] {
+            flex: 2;
+            margin: 0 10px;
+        }
+        .control-row span {
+            width: 40px;
+            text-align: right;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: #333;
+            height: 6px;
+            border-radius: 3px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #ff6b6b;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .color-btn {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #444;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .color-btn:hover { transform: scale(1.1); }
+        .color-btn.active { border-color: #fff; }
+        .credit {
+            margin-top: 20px;
+            color: #666;
+            font-size: 0.8rem;
+        }
+        .credit a { color: #ff6b6b; }
+    </style>
+</head>
+<body>
+    <h1>🎮 Dark Atmosphere Shader</h1>
+    
+    <div class="demo-container">
+        <div class="demo-box">
+            <h3>Original</h3>
+            <canvas id="original" width="256" height="256"></canvas>
+        </div>
+        <div class="demo-box">
+            <h3>Con Shader</h3>
+            <canvas id="shaded" width="256" height="256"></canvas>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <div class="control-row">
+            <label>Vignette</label>
+            <input type="range" id="vignette" min="0" max="100" value="40">
+            <span id="vignette-val">0.4</span>
+        </div>
+        <div class="control-row">
+            <label>Scanlines</label>
+            <input type="range" id="scanlines" min="0" max="30" value="5">
+            <span id="scanlines-val">0.05</span>
+        </div>
+        <div class="control-row">
+            <label>Tint</label>
+            <input type="range" id="tint" min="0" max="100" value="30">
+            <span id="tint-val">0.3</span>
+        </div>
+        <div class="control-row">
+            <label>Grain</label>
+            <input type="range" id="grain" min="0" max="50" value="10">
+            <span id="grain-val">0.1</span>
+        </div>
+        <div>
+            <label>Color Tint:</label>
+            <div class="color-picker">
+                <div class="color-btn active" data-color="0.7,0.8,1.0" style="background: rgb(178,204,255)" title="Frío"></div>
+                <div class="color-btn" data-color="1.0,0.7,0.8" style="background: rgb(255,178,204)" title="Rosa"></div>
+                <div class="color-btn" data-color="0.7,1.0,0.8" style="background: rgb(178,255,204)" title="Verde"></div>
+                <div class="color-btn" data-color="0.8,0.7,1.0" style="background: rgb(204,178,255)" title="Púrpura"></div>
+                <div class="color-btn" data-color="1.0,0.9,0.7" style="background: rgb(255,230,178)" title="Cálido"></div>
+                <div class="color-btn" data-color="0.6,0.8,0.7" style="background: rgb(153,204,178)" title="Teal"></div>
+            </div>
+        </div>
+    </div>
+    
+    <p class="credit">Demo por <a href="https://the-lobsterino.github.io">The Lobsterino</a> 🦞</p>
+
+    <script>
+        const vertexShaderSource = `
+            attribute vec2 a_position;
+            attribute vec2 a_texCoord;
+            varying vec2 v_texCoord;
+            void main() {
+                gl_Position = vec4(a_position, 0.0, 1.0);
+                v_texCoord = a_texCoord;
+            }
+        `;
+        
+        const fragmentShaderSource = `
+            precision mediump float;
+            varying vec2 v_texCoord;
+            uniform sampler2D u_texture;
+            uniform vec2 u_resolution;
+            uniform float u_time;
+            uniform float u_vignette;
+            uniform float u_scanlines;
+            uniform float u_tint_strength;
+            uniform vec3 u_tint_color;
+            uniform float u_grain;
+            
+            float random(vec2 st) {
+                return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+            }
+            
+            void main() {
+                vec4 col = texture2D(u_texture, v_texCoord);
+                
+                // Vignette
+                vec2 center = v_texCoord - 0.5;
+                float vignette = 1.0 - dot(center, center) * u_vignette * 2.0;
+                
+                // Scanlines
+                float scanline = 1.0 - u_scanlines * step(0.5, fract(v_texCoord.y * u_resolution.y * 0.5));
+                
+                // Film grain
+                float grain = (random(v_texCoord + fract(u_time)) - 0.5) * u_grain;
+                
+                // Color grading
+                vec3 graded = mix(col.rgb, col.rgb * u_tint_color, u_tint_strength);
+                
+                // Combine
+                vec3 final_color = graded * vignette * scanline + grain;
+                
+                gl_FragColor = vec4(final_color, col.a);
+            }
+        `;
+        
+        let gl, program, texture;
+        let params = {
+            vignette: 0.4,
+            scanlines: 0.05,
+            tint: 0.3,
+            grain: 0.1,
+            tintColor: [0.7, 0.8, 1.0]
+        };
+        
+        function initWebGL() {
+            const canvas = document.getElementById('shaded');
+            gl = canvas.getContext('webgl');
+            
+            // Compile shaders
+            const vs = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vs, vertexShaderSource);
+            gl.compileShader(vs);
+            
+            const fs = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fs, fragmentShaderSource);
+            gl.compileShader(fs);
+            
+            program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
+            gl.linkProgram(program);
+            gl.useProgram(program);
+            
+            // Quad vertices
+            const vertices = new Float32Array([
+                -1, -1,  0, 1,
+                 1, -1,  1, 1,
+                -1,  1,  0, 0,
+                 1,  1,  1, 0,
+            ]);
+            
+            const buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+            
+            const aPosition = gl.getAttribLocation(program, 'a_position');
+            gl.enableVertexAttribArray(aPosition);
+            gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 16, 0);
+            
+            const aTexCoord = gl.getAttribLocation(program, 'a_texCoord');
+            gl.enableVertexAttribArray(aTexCoord);
+            gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 16, 8);
+            
+            // Load texture
+            texture = gl.createTexture();
+            const img = new Image();
+            img.onload = () => {
+                // Original canvas
+                const origCtx = document.getElementById('original').getContext('2d');
+                origCtx.imageSmoothingEnabled = false;
+                origCtx.drawImage(img, 0, 0, 256, 256);
+                
+                // WebGL texture
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                
+                render();
+            };
+            img.src = 'shader-demo-sprite.png';
+        }
+        
+        function render() {
+            gl.viewport(0, 0, 256, 256);
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            
+            gl.uniform2f(gl.getUniformLocation(program, 'u_resolution'), 256, 256);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_time'), performance.now() / 1000);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_vignette'), params.vignette);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_scanlines'), params.scanlines);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_tint_strength'), params.tint);
+            gl.uniform3fv(gl.getUniformLocation(program, 'u_tint_color'), params.tintColor);
+            gl.uniform1f(gl.getUniformLocation(program, 'u_grain'), params.grain);
+            
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            requestAnimationFrame(render);
+        }
+        
+        // Controls
+        document.getElementById('vignette').oninput = (e) => {
+            params.vignette = e.target.value / 100;
+            document.getElementById('vignette-val').textContent = params.vignette.toFixed(2);
+        };
+        document.getElementById('scanlines').oninput = (e) => {
+            params.scanlines = e.target.value / 100;
+            document.getElementById('scanlines-val').textContent = params.scanlines.toFixed(2);
+        };
+        document.getElementById('tint').oninput = (e) => {
+            params.tint = e.target.value / 100;
+            document.getElementById('tint-val').textContent = params.tint.toFixed(2);
+        };
+        document.getElementById('grain').oninput = (e) => {
+            params.grain = e.target.value / 100;
+            document.getElementById('grain-val').textContent = params.grain.toFixed(2);
+        };
+        
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                params.tintColor = btn.dataset.color.split(',').map(Number);
+            };
+        });
+        
+        initWebGL();
+    </script>
+</body>
+</html>
