@@ -13,10 +13,10 @@ class Core {
         // Scene setup
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        // Adjust camera distance for blob radius 4
+        // Adjust camera distance for blob radius 4 (further = smaller blob)
         const isMobile = window.innerWidth < 768;
         const isSmallMobile = window.innerWidth < 400;
-        this.camera.position.z = isSmallMobile ? 14.0 : (isMobile ? 12.0 : 10.0);
+        this.camera.position.z = isSmallMobile ? 18.0 : (isMobile ? 16.0 : 14.0);
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ 
@@ -164,7 +164,8 @@ class Core {
                 vNormal = normal;
                 
                 // Waelyasmina approach: pnoise with time animation
-                float noise = 3.0 * pnoise(position + uTime, vec3(10.0));
+                // Reduced from 3.0 to 2.0 to minimize triangle overlap
+                float noise = 2.0 * pnoise(position + uTime, vec3(10.0));
                 
                 float displacement = noise / 10.0;
                 
@@ -398,7 +399,7 @@ class Core {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         const isMobile = window.innerWidth < 768;
         const isSmallMobile = window.innerWidth < 400;
-        this.camera.position.z = isSmallMobile ? 14.0 : (isMobile ? 12.0 : 10.0);
+        this.camera.position.z = isSmallMobile ? 18.0 : (isMobile ? 16.0 : 14.0);
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
