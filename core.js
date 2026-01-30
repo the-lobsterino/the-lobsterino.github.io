@@ -318,44 +318,43 @@ class Core {
                 float facing = dot(viewDir, vNormal);  // 1 = facing camera, 0 = edge
                 float fresnel = pow(1.0 - max(facing, 0.0), 2.0);
                 
-                // Secondary noise layer for center detail (view-dependent)
-                // More visible when facing camera directly
-                vec3 centerPos = spherePos * 1.8;
-                float centerNoise = snoise4D(vec4(centerPos, slowTime * 1.2));
-                centerNoise = centerNoise * 0.5 + 0.5;
+                // FAKE BUMP MAPPING for center visibility
+                // Compute noise gradient to fake surface variation
+                float eps = 0.05;
+                float nx = snoise4D(vec4(spherePos + vec3(eps, 0.0, 0.0), slowTime)) - 
+                           snoise4D(vec4(spherePos - vec3(eps, 0.0, 0.0), slowTime));
+                float ny = snoise4D(vec4(spherePos + vec3(0.0, eps, 0.0), slowTime)) - 
+                           snoise4D(vec4(spherePos - vec3(0.0, eps, 0.0), slowTime));
+                float nz = snoise4D(vec4(spherePos + vec3(0.0, 0.0, eps), slowTime)) - 
+                           snoise4D(vec4(spherePos - vec3(0.0, 0.0, eps), slowTime));
+                vec3 noiseGradient = normalize(vec3(nx, ny, nz));
                 
-                // Blend center noise more when facing camera
-                float centerBlend = smoothstep(0.3, 0.9, facing) * 0.4;
-                noiseVal = mix(noiseVal, noiseVal * (0.7 + centerNoise * 0.6), centerBlend);
+                // Perturb the normal based on noise gradient
+                vec3 perturbedNormal = normalize(vNormal + noiseGradient * 0.4);
                 
-                // Fake ambient occlusion from noise variation
-                float ao = 1.0 - (1.0 - noiseVal) * 0.3;
+                // Fake diffuse lighting from above-right
+                vec3 lightDir = normalize(vec3(0.3, 0.5, 1.0));
+                float diffuse = max(dot(perturbedNormal, lightDir), 0.0);
                 
-                // Cavity/crevice darkening - areas where noise dips
-                float cavity = smoothstep(0.3, 0.5, noiseVal);
+                // This creates visible "bumps" even when looking at center
+                float bumpShading = 0.6 + diffuse * 0.5;
                 
                 // Base ember colors
-                vec3 colorDeep = vec3(0.3, 0.05, 0.0);    // Deep ember (darker)
-                vec3 colorMid = vec3(0.85, 0.3, 0.05);    // Orange
-                vec3 colorHot = vec3(1.0, 0.65, 0.15);    // Golden
-                vec3 colorCore = vec3(1.0, 0.9, 0.7);     // Bright center
+                vec3 colorDeep = vec3(0.3, 0.06, 0.0);    // Deep ember
+                vec3 colorMid = vec3(0.9, 0.35, 0.05);    // Orange
+                vec3 colorHot = vec3(1.0, 0.7, 0.2);      // Golden
+                vec3 colorCore = vec3(1.0, 0.95, 0.8);    // Bright
                 
                 // Mix colors based on noise
                 vec3 color = mix(colorDeep, colorMid, noiseVal);
-                color = mix(color, colorHot, smoothstep(0.5, 0.8, noiseVal));
-                color = mix(color, colorCore, smoothstep(0.7, 0.95, noiseVal) * 0.6);
+                color = mix(color, colorHot, smoothstep(0.45, 0.75, noiseVal));
+                color = mix(color, colorCore, smoothstep(0.7, 0.95, noiseVal) * 0.5);
                 
-                // Apply AO and cavity
-                color *= ao * cavity;
-                
-                // Subtle variation in center based on secondary noise
-                color += vec3(0.15, 0.05, 0.0) * centerNoise * facing * 0.3;
+                // Apply bump shading - this makes waves visible in center!
+                color *= bumpShading;
                 
                 // Fresnel rim (edge glow)
-                color = mix(color, colorMid * 1.2, fresnel * 0.25);
-                
-                // Boost overall to compensate for AO darkening
-                color *= 1.15;
+                color = mix(color, colorMid * 1.3, fresnel * 0.3);
                 
                 // NO transparency - solid faces
                 gl_FragColor = vec4(color, 1.0);

@@ -57,9 +57,9 @@ body {
 
 .fragment {
     position: absolute;
-    font-size: 0.9rem;
-    font-weight: 300;
-    color: rgba(255, 200, 150, 0.5);
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: rgba(255, 200, 150, 0.6);
     cursor: pointer;
     pointer-events: auto;
     transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
