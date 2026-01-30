@@ -1,0 +1,4 @@
+node_modules/
+test-screenshot.png
+test-webgl.mjs
+package-lock.json
