@@ -194,8 +194,8 @@ class Core {
             }
         `;
 
-        // IcosahedronGeometry(4, 30) - exactly as waelyasmina tutorial
-        const geometry = new THREE.IcosahedronGeometry(4, 30);
+        // IcosahedronGeometry(radius, subdivision) - reduced from 30 to 20
+        const geometry = new THREE.IcosahedronGeometry(4, 20);
         this.coreMaterial = new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader,
@@ -203,7 +203,7 @@ class Core {
                 uTime: { value: 0 },
                 uMouse: { value: new THREE.Vector2(0, 0) }
             },
-            wireframe: true,   // DEBUG: wireframe on
+            wireframe: false,  // DEBUG: wireframe off to see face colors
             transparent: false,
             side: THREE.DoubleSide
         });
