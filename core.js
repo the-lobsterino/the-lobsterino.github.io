@@ -345,19 +345,26 @@ class Core {
                 // More contrast for visible variation
                 emission = smoothstep(0.2, 0.8, emission);
                 
-                // Ember emission colors (no external lighting - it's a light source!)
-                vec3 colorCold = vec3(0.25, 0.04, 0.0);   // Dark ember / sunspots
-                vec3 colorWarm = vec3(0.9, 0.3, 0.02);    // Orange plasma
-                vec3 colorHot = vec3(1.0, 0.7, 0.15);     // Hot yellow
-                vec3 colorWhite = vec3(1.0, 0.95, 0.85);  // White hot
+                // Albedo layer - subtle surface variation independent of emission
+                float albedoNoise = snoise4D(vec4(spherePos * 3.0, slowTime * 0.5));
+                float albedo = 0.85 + albedoNoise * 0.15;  // Subtle variation 0.7-1.0
+                
+                // Ember emission colors (toned down, less aggressive yellow)
+                vec3 colorCold = vec3(0.2, 0.03, 0.0);    // Dark ember / sunspots
+                vec3 colorWarm = vec3(0.8, 0.25, 0.02);   // Orange plasma
+                vec3 colorHot = vec3(0.95, 0.5, 0.1);     // Softer warm yellow
+                vec3 colorBright = vec3(1.0, 0.75, 0.4);  // Warm white (less harsh)
                 
                 // Color based on emission intensity (like blackbody radiation)
                 vec3 color = mix(colorCold, colorWarm, smoothstep(0.0, 0.4, emission));
                 color = mix(color, colorHot, smoothstep(0.35, 0.7, emission));
-                color = mix(color, colorWhite, smoothstep(0.7, 1.0, emission) * 0.6);
+                color = mix(color, colorBright, smoothstep(0.75, 1.0, emission) * 0.4);
                 
-                // Fresnel - edges glow brighter (limb brightening, like real sun)
-                color = mix(color, colorHot * 1.2, fresnel * 0.2);
+                // Apply albedo - creates surface texture variation
+                color *= albedo;
+                
+                // Fresnel - subtle limb brightening
+                color = mix(color, colorWarm * 1.1, fresnel * 0.15);
                 
                 // NO transparency - solid faces
                 gl_FragColor = vec4(color, 1.0);
