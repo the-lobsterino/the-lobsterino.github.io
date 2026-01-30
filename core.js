@@ -310,51 +310,54 @@ class Core {
                     S *= 1.4;
                 }
                 
-                // Remap accumulated value to [0,1]
-                float noiseVal = a * 0.5 + 0.5;
-                
-                // View direction and facing ratio
+                // View direction for fresnel
                 vec3 viewDir = normalize(cameraPosition - vPosition);
-                float facing = dot(viewDir, vNormal);  // 1 = facing camera, 0 = edge
-                float fresnel = pow(1.0 - max(facing, 0.0), 2.0);
+                float facing = dot(viewDir, vNormal);
+                float fresnel = pow(1.0 - max(facing, 0.0), 2.5);
                 
-                // FAKE BUMP MAPPING for center visibility
-                // Compute noise gradient to fake surface variation
-                float eps = 0.05;
-                float nx = snoise4D(vec4(spherePos + vec3(eps, 0.0, 0.0), slowTime)) - 
-                           snoise4D(vec4(spherePos - vec3(eps, 0.0, 0.0), slowTime));
-                float ny = snoise4D(vec4(spherePos + vec3(0.0, eps, 0.0), slowTime)) - 
-                           snoise4D(vec4(spherePos - vec3(0.0, eps, 0.0), slowTime));
-                float nz = snoise4D(vec4(spherePos + vec3(0.0, 0.0, eps), slowTime)) - 
-                           snoise4D(vec4(spherePos - vec3(0.0, 0.0, eps), slowTime));
-                vec3 noiseGradient = normalize(vec3(nx, ny, nz));
+                // === TURBULENT EMISSION (inspired by Carlos's shader) ===
+                // Secondary domain-warped layer for more visible turbulence
+                vec3 q = spherePos;
+                vec2 accum = vec2(0.0);
+                float intensity = 0.0;
+                float scale = 6.0;
+                mat3 m3 = rotate3D(0.8, vec3(0.5, 0.7, 0.3));
                 
-                // Perturb the normal based on noise gradient
-                vec3 perturbedNormal = normalize(vNormal + noiseGradient * 0.4);
+                for (float j = 0.0; j < 8.0; j++) {
+                    q = m3 * q;
+                    accum = (m3 * vec3(accum, 0.0)).xy;
+                    
+                    // 4D sample with time
+                    vec3 samplePos = q * scale + vec3(accum, 0.0) + j * 0.3;
+                    float n = snoise4D(vec4(samplePos, slowTime + j * 0.05));
+                    
+                    // Accumulate with cos for interference patterns
+                    intensity += cos(n * 3.14159 + j) / scale;
+                    accum -= vec2(sin(n * 2.0), cos(n * 2.0)) * 0.5;
+                    
+                    scale *= 1.3;
+                }
                 
-                // Fake diffuse lighting from above-right
-                vec3 lightDir = normalize(vec3(0.3, 0.5, 1.0));
-                float diffuse = max(dot(perturbedNormal, lightDir), 0.0);
+                // Combine with base noise
+                float emission = a * 0.4 + intensity * 0.6;
+                emission = emission * 0.5 + 0.5;  // Remap to [0,1]
                 
-                // This creates visible "bumps" even when looking at center
-                float bumpShading = 0.6 + diffuse * 0.5;
+                // More contrast for visible variation
+                emission = smoothstep(0.2, 0.8, emission);
                 
-                // Base ember colors
-                vec3 colorDeep = vec3(0.3, 0.06, 0.0);    // Deep ember
-                vec3 colorMid = vec3(0.9, 0.35, 0.05);    // Orange
-                vec3 colorHot = vec3(1.0, 0.7, 0.2);      // Golden
-                vec3 colorCore = vec3(1.0, 0.95, 0.8);    // Bright
+                // Ember emission colors (no external lighting - it's a light source!)
+                vec3 colorCold = vec3(0.25, 0.04, 0.0);   // Dark ember / sunspots
+                vec3 colorWarm = vec3(0.9, 0.3, 0.02);    // Orange plasma
+                vec3 colorHot = vec3(1.0, 0.7, 0.15);     // Hot yellow
+                vec3 colorWhite = vec3(1.0, 0.95, 0.85);  // White hot
                 
-                // Mix colors based on noise
-                vec3 color = mix(colorDeep, colorMid, noiseVal);
-                color = mix(color, colorHot, smoothstep(0.45, 0.75, noiseVal));
-                color = mix(color, colorCore, smoothstep(0.7, 0.95, noiseVal) * 0.5);
+                // Color based on emission intensity (like blackbody radiation)
+                vec3 color = mix(colorCold, colorWarm, smoothstep(0.0, 0.4, emission));
+                color = mix(color, colorHot, smoothstep(0.35, 0.7, emission));
+                color = mix(color, colorWhite, smoothstep(0.7, 1.0, emission) * 0.6);
                 
-                // Apply bump shading - this makes waves visible in center!
-                color *= bumpShading;
-                
-                // Fresnel rim (edge glow)
-                color = mix(color, colorMid * 1.3, fresnel * 0.3);
+                // Fresnel - edges glow brighter (limb brightening, like real sun)
+                color = mix(color, colorHot * 1.2, fresnel * 0.2);
                 
                 // NO transparency - solid faces
                 gl_FragColor = vec4(color, 1.0);
