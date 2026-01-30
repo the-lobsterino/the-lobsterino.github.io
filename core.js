@@ -176,7 +176,7 @@ class Core {
             }
         `;
 
-        // Fragment shader - XorDev turbulence + warm ember glow
+        // Fragment shader - 4D Perlin noise (3D position + time)
         const fragmentShader = `
             uniform float uTime;
             uniform vec2 uMouse;
@@ -184,106 +184,135 @@ class Core {
             varying vec3 vNormal;
             varying vec3 vPosition;
             
-            // XorDev turbulence constants
-            #define TURB_NUM 6.0
-            #define TURB_AMP 0.5
-            #define TURB_SPEED 0.2
-            #define TURB_FREQ 2.0
-            #define TURB_EXP 1.5
+            // 4D noise functions (from Ashima/Stefan Gustavson)
+            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            float mod289(float x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 permute(vec4 x) { return mod289(((x*34.0)+10.0)*x); }
+            float permute(float x) { return mod289(((x*34.0)+10.0)*x); }
+            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+            float taylorInvSqrt(float r) { return 1.79284291400159 - 0.85373472095314 * r; }
             
-            // Simple hash for noise
-            float hash(vec2 p) {
-                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+            vec4 grad4(float j, vec4 ip) {
+                const vec4 ones = vec4(1.0, 1.0, 1.0, -1.0);
+                vec4 p, s;
+                p.xyz = floor(fract(vec3(j) * ip.xyz) * 7.0) * ip.z - 1.0;
+                p.w = 1.5 - dot(abs(p.xyz), ones.xyz);
+                s = vec4(lessThan(p, vec4(0.0)));
+                p.xyz = p.xyz + (s.xyz*2.0 - 1.0) * s.www;
+                return p;
             }
             
-            float noise(vec2 p) {
-                vec2 i = floor(p);
-                vec2 f = fract(p);
-                f = f * f * (3.0 - 2.0 * f);
-                return mix(
-                    mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
-                    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
-                    f.y
-                );
+            #define F4 0.309016994374947451
+            
+            float snoise4D(vec4 v) {
+                const vec4 C = vec4(
+                    0.138196601125011,   // (5 - sqrt(5))/20 G4
+                    0.276393202250021,   // 2 * G4
+                    0.414589803375032,   // 3 * G4
+                    -0.447213595499958); // -1 + 4 * G4
+                
+                vec4 i = floor(v + dot(v, vec4(F4)));
+                vec4 x0 = v - i + dot(i, C.xxxx);
+                
+                vec4 i0;
+                vec3 isX = step(x0.yzw, x0.xxx);
+                vec3 isYZ = step(x0.zww, x0.yyz);
+                i0.x = isX.x + isX.y + isX.z;
+                i0.yzw = 1.0 - isX;
+                i0.y += isYZ.x + isYZ.y;
+                i0.zw += 1.0 - isYZ.xy;
+                i0.z += isYZ.z;
+                i0.w += 1.0 - isYZ.z;
+                
+                vec4 i3 = clamp(i0, 0.0, 1.0);
+                vec4 i2 = clamp(i0 - 1.0, 0.0, 1.0);
+                vec4 i1 = clamp(i0 - 2.0, 0.0, 1.0);
+                
+                vec4 x1 = x0 - i1 + C.xxxx;
+                vec4 x2 = x0 - i2 + C.yyyy;
+                vec4 x3 = x0 - i3 + C.zzzz;
+                vec4 x4 = x0 + C.wwww;
+                
+                i = mod289(i);
+                float j0 = permute(permute(permute(permute(i.w) + i.z) + i.y) + i.x);
+                vec4 j1 = permute(permute(permute(permute(
+                    i.w + vec4(i1.w, i2.w, i3.w, 1.0))
+                    + i.z + vec4(i1.z, i2.z, i3.z, 1.0))
+                    + i.y + vec4(i1.y, i2.y, i3.y, 1.0))
+                    + i.x + vec4(i1.x, i2.x, i3.x, 1.0));
+                
+                vec4 ip = vec4(1.0/294.0, 1.0/49.0, 1.0/7.0, 0.0);
+                
+                vec4 p0 = grad4(j0, ip);
+                vec4 p1 = grad4(j1.x, ip);
+                vec4 p2 = grad4(j1.y, ip);
+                vec4 p3 = grad4(j1.z, ip);
+                vec4 p4 = grad4(j1.w, ip);
+                
+                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+                p0 *= norm.x;
+                p1 *= norm.y;
+                p2 *= norm.z;
+                p3 *= norm.w;
+                p4 *= taylorInvSqrt(dot(p4,p4));
+                
+                vec3 m0 = max(0.6 - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);
+                vec2 m1 = max(0.6 - vec2(dot(x3,x3), dot(x4,x4)), 0.0);
+                m0 = m0 * m0;
+                m1 = m1 * m1;
+                return 49.0 * (dot(m0*m0, vec3(dot(p0, x0), dot(p1, x1), dot(p2, x2)))
+                    + dot(m1*m1, vec2(dot(p3, x3), dot(p4, x4))));
             }
             
-            // FBM noise
-            float fbm(vec2 p) {
+            // FBM using 4D noise
+            float fbm4D(vec3 pos, float time) {
                 float v = 0.0;
                 float a = 0.5;
-                mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
+                vec3 shift = vec3(100.0);
                 for (int i = 0; i < 4; i++) {
-                    v += a * noise(p);
-                    p = rot * p * 2.0;
+                    v += a * snoise4D(vec4(pos, time));
+                    pos = pos * 2.0 + shift;
+                    time *= 1.1;
                     a *= 0.5;
                 }
                 return v;
             }
             
-            // XorDev turbulence distortion
-            vec2 turbulence(vec2 pos, float time) {
-                float freq = TURB_FREQ;
-                mat2 rot = mat2(0.6, -0.8, 0.8, 0.6);
-                
-                for (float i = 0.0; i < TURB_NUM; i++) {
-                    float phase = freq * (pos * rot).y + TURB_SPEED * time + i;
-                    pos += TURB_AMP * rot[0] * sin(phase) / freq;
-                    rot *= mat2(0.6, -0.8, 0.8, 0.6);
-                    freq *= TURB_EXP;
-                }
-                return pos;
-            }
-            
             void main() {
+                // Normalize position to use as 3D texture coordinate
+                vec3 spherePos = normalize(vPosition) * 2.0;
+                
+                // Slow time for smooth animation
+                float slowTime = uTime * 0.15;
+                
+                // 4D noise: 3D position + time
+                float n1 = fbm4D(spherePos, slowTime);
+                float n2 = fbm4D(spherePos * 1.5 + vec3(50.0), slowTime * 0.8);
+                float noiseVal = n1 * 0.6 + n2 * 0.4;
+                
+                // Remap noise from [-1,1] to [0,1]
+                noiseVal = noiseVal * 0.5 + 0.5;
+                
                 // Base ember colors
-                vec3 colorDeep = vec3(0.5, 0.1, 0.0);     // Deep ember
-                vec3 colorMid = vec3(0.9, 0.35, 0.05);    // Orange
-                vec3 colorHot = vec3(1.0, 0.7, 0.2);      // Golden
-                vec3 colorCore = vec3(1.0, 0.95, 0.85);   // White-hot center
+                vec3 colorDeep = vec3(0.4, 0.08, 0.0);    // Deep ember
+                vec3 colorMid = vec3(0.85, 0.3, 0.05);    // Orange
+                vec3 colorHot = vec3(1.0, 0.65, 0.15);    // Golden
+                vec3 colorCore = vec3(1.0, 0.9, 0.7);     // Bright center
                 
                 // Fresnel for edge glow
                 vec3 viewDir = normalize(cameraPosition - vPosition);
-                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 2.5);
+                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 2.0);
                 
-                // Apply XorDev turbulence to UV coordinates
-                vec2 turbUv = turbulence(vUv * 3.0, uTime);
+                // Mix colors based on noise
+                vec3 color = mix(colorDeep, colorMid, noiseVal);
+                color = mix(color, colorHot, smoothstep(0.5, 0.8, noiseVal));
+                color = mix(color, colorCore, smoothstep(0.75, 0.95, noiseVal) * 0.5);
                 
-                // FBM noise on turbulent coordinates for organic texture
-                float n1 = fbm(turbUv * 2.0 + uTime * 0.1);
-                float n2 = fbm(turbUv * 4.0 - uTime * 0.15);
-                float turbNoise = n1 * 0.6 + n2 * 0.4;
+                // Fresnel rim
+                color = mix(color, colorMid * 1.3, fresnel * 0.3);
                 
-                // Distance from center for core glow
-                float dist = length(vPosition);
-                float coreFactor = smoothstep(1.0, 0.0, dist);
-                
-                // Combine turbulence with position-based coloring
-                float intensity = turbNoise * (0.7 + coreFactor * 0.3);
-                
-                // Pulsing
-                float pulse = sin(uTime * 0.7) * 0.5 + 0.5;
-                intensity += pulse * 0.1;
-                
-                // Mix colors based on turbulence intensity and position
-                vec3 color = mix(colorDeep, colorMid, intensity);
-                color = mix(color, colorHot, intensity * coreFactor);
-                color = mix(color, colorCore, pow(coreFactor, 2.0) * intensity * 0.5);
-                
-                // Fresnel edge glow (ember rim)
-                color = mix(color, colorMid * 1.2, fresnel * 0.4);
-                
-                // Hot spots from turbulence
-                float hotSpots = smoothstep(0.55, 0.75, turbNoise);
-                color = mix(color, colorHot, hotSpots * 0.3 * (1.0 - fresnel));
-                
-                // Subtle mouse interaction
-                color += vec3(0.05, 0.02, 0.0) * (uMouse.x + uMouse.y) * 0.3;
-                
-                // Alpha with soft edges
-                float alpha = 1.0 - fresnel * 0.2;
-                alpha *= 0.95;
-                
-                gl_FragColor = vec4(color, alpha);
+                // NO transparency - solid faces
+                gl_FragColor = vec4(color, 1.0);
             }
         `;
 
@@ -297,8 +326,10 @@ class Core {
                 uMouse: { value: new THREE.Vector2(0, 0) }
             },
             wireframe: false,
-            transparent: true,
-            side: THREE.DoubleSide
+            transparent: false,  // Solid, no transparency artifacts
+            side: THREE.FrontSide,  // Only front faces
+            depthWrite: true,
+            depthTest: true
         });
 
         this.core = new THREE.Mesh(geometry, this.coreMaterial);
