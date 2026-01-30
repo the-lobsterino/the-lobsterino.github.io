@@ -117,10 +117,14 @@ function loadShader(shaderData) {
   `;
   
   // Fragment shader with compatibility wrapper
+  // Add uniforms only if not already in shader code (avoid redefinition)
+  const hasTime = shaderData.code.includes('uniform float u_time');
+  const hasResolution = shaderData.code.includes('uniform vec2 u_resolution');
+  
   const fragmentShaderSource = `
     precision mediump float;
-    uniform float u_time;
-    uniform vec2 u_resolution;
+    ${hasTime ? '' : 'uniform float u_time;'}
+    ${hasResolution ? '' : 'uniform vec2 u_resolution;'}
     
     ${shaderData.code}
   `;
