@@ -30,9 +30,8 @@ class Core {
         // Create the organic core
         this.createCore();
         
-        // DEBUG: Particles disabled
-        // this.createParticles();
-        this.particles = null;
+        // Create particles
+        this.createParticles();
 
         // Events
         window.addEventListener('resize', () => this.onResize());
@@ -177,7 +176,7 @@ class Core {
             }
         `;
 
-        // Fragment shader - DEBUG MODE: red outside, blue inside
+        // Fragment shader - XorDev turbulence + warm ember glow
         const fragmentShader = `
             uniform float uTime;
             uniform vec2 uMouse;
@@ -185,12 +184,106 @@ class Core {
             varying vec3 vNormal;
             varying vec3 vPosition;
             
-            void main() {
-                // DEBUG: Red for front faces, Blue for back faces
-                // gl_FrontFacing is true for front-facing fragments
-                vec3 color = gl_FrontFacing ? vec3(1.0, 0.2, 0.2) : vec3(0.2, 0.2, 1.0);
+            // XorDev turbulence constants
+            #define TURB_NUM 6.0
+            #define TURB_AMP 0.5
+            #define TURB_SPEED 0.2
+            #define TURB_FREQ 2.0
+            #define TURB_EXP 1.5
+            
+            // Simple hash for noise
+            float hash(vec2 p) {
+                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+            }
+            
+            float noise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(
+                    mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+                    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+                    f.y
+                );
+            }
+            
+            // FBM noise
+            float fbm(vec2 p) {
+                float v = 0.0;
+                float a = 0.5;
+                mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
+                for (int i = 0; i < 4; i++) {
+                    v += a * noise(p);
+                    p = rot * p * 2.0;
+                    a *= 0.5;
+                }
+                return v;
+            }
+            
+            // XorDev turbulence distortion
+            vec2 turbulence(vec2 pos, float time) {
+                float freq = TURB_FREQ;
+                mat2 rot = mat2(0.6, -0.8, 0.8, 0.6);
                 
-                gl_FragColor = vec4(color, 1.0);
+                for (float i = 0.0; i < TURB_NUM; i++) {
+                    float phase = freq * (pos * rot).y + TURB_SPEED * time + i;
+                    pos += TURB_AMP * rot[0] * sin(phase) / freq;
+                    rot *= mat2(0.6, -0.8, 0.8, 0.6);
+                    freq *= TURB_EXP;
+                }
+                return pos;
+            }
+            
+            void main() {
+                // Base ember colors
+                vec3 colorDeep = vec3(0.5, 0.1, 0.0);     // Deep ember
+                vec3 colorMid = vec3(0.9, 0.35, 0.05);    // Orange
+                vec3 colorHot = vec3(1.0, 0.7, 0.2);      // Golden
+                vec3 colorCore = vec3(1.0, 0.95, 0.85);   // White-hot center
+                
+                // Fresnel for edge glow
+                vec3 viewDir = normalize(cameraPosition - vPosition);
+                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 2.5);
+                
+                // Apply XorDev turbulence to UV coordinates
+                vec2 turbUv = turbulence(vUv * 3.0, uTime);
+                
+                // FBM noise on turbulent coordinates for organic texture
+                float n1 = fbm(turbUv * 2.0 + uTime * 0.1);
+                float n2 = fbm(turbUv * 4.0 - uTime * 0.15);
+                float turbNoise = n1 * 0.6 + n2 * 0.4;
+                
+                // Distance from center for core glow
+                float dist = length(vPosition);
+                float coreFactor = smoothstep(1.0, 0.0, dist);
+                
+                // Combine turbulence with position-based coloring
+                float intensity = turbNoise * (0.7 + coreFactor * 0.3);
+                
+                // Pulsing
+                float pulse = sin(uTime * 0.7) * 0.5 + 0.5;
+                intensity += pulse * 0.1;
+                
+                // Mix colors based on turbulence intensity and position
+                vec3 color = mix(colorDeep, colorMid, intensity);
+                color = mix(color, colorHot, intensity * coreFactor);
+                color = mix(color, colorCore, pow(coreFactor, 2.0) * intensity * 0.5);
+                
+                // Fresnel edge glow (ember rim)
+                color = mix(color, colorMid * 1.2, fresnel * 0.4);
+                
+                // Hot spots from turbulence
+                float hotSpots = smoothstep(0.55, 0.75, turbNoise);
+                color = mix(color, colorHot, hotSpots * 0.3 * (1.0 - fresnel));
+                
+                // Subtle mouse interaction
+                color += vec3(0.05, 0.02, 0.0) * (uMouse.x + uMouse.y) * 0.3;
+                
+                // Alpha with soft edges
+                float alpha = 1.0 - fresnel * 0.2;
+                alpha *= 0.95;
+                
+                gl_FragColor = vec4(color, alpha);
             }
         `;
 
@@ -203,28 +296,27 @@ class Core {
                 uTime: { value: 0 },
                 uMouse: { value: new THREE.Vector2(0, 0) }
             },
-            wireframe: false,  // DEBUG: wireframe off to see face colors
-            transparent: false,
+            wireframe: false,
+            transparent: true,
             side: THREE.DoubleSide
         });
 
         this.core = new THREE.Mesh(geometry, this.coreMaterial);
         this.scene.add(this.core);
 
-        // DEBUG: Glow disabled for wireframe debug
-        // const glowTexture = this.createGlowTexture();
-        // const glowMaterial = new THREE.SpriteMaterial({
-        //     map: glowTexture,
-        //     color: 0xff6622,
-        //     transparent: true,
-        //     blending: THREE.AdditiveBlending,
-        //     depthWrite: false
-        // });
-        // this.glow = new THREE.Sprite(glowMaterial);
-        // this.glow.scale.set(4, 4, 1);
-        // this.glow.position.z = -0.5;
-        // this.scene.add(this.glow);
-        this.glow = null; // placeholder for animate()
+        // Add glow as a simple sprite behind the core
+        const glowTexture = this.createGlowTexture();
+        const glowMaterial = new THREE.SpriteMaterial({
+            map: glowTexture,
+            color: 0xff6622,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        this.glow = new THREE.Sprite(glowMaterial);
+        this.glow.scale.set(4, 4, 1);
+        this.glow.position.z = -0.5;
+        this.scene.add(this.glow);
     }
 
     createParticles() {
@@ -336,12 +428,10 @@ class Core {
         // Update uniforms
         this.coreMaterial.uniforms.uTime.value = this.time;
         this.coreMaterial.uniforms.uMouse.value.set(this.mouse.x, this.mouse.y);
-        // Pulse glow scale (if glow exists)
-        if (this.glow) {
-            const glowPulse = 1 + Math.sin(this.time * 0.5) * 0.05;
-            this.glow.scale.set(4 * glowPulse, 4 * glowPulse, 1);
-        }
-        if (this.particles) this.particles.material.uniforms.uTime.value = this.time;
+        // Pulse glow scale
+        const glowPulse = 1 + Math.sin(this.time * 0.5) * 0.05;
+        this.glow.scale.set(4 * glowPulse, 4 * glowPulse, 1);
+        this.particles.material.uniforms.uTime.value = this.time;
 
         // Subtle core rotation
         this.core.rotation.y += 0.002;
@@ -350,7 +440,7 @@ class Core {
         // Core follows mouse slightly
         this.core.position.x = this.mouse.x * 0.2;
         this.core.position.y = this.mouse.y * 0.2;
-        if (this.glow) this.glow.position.copy(this.core.position);
+        this.glow.position.copy(this.core.position);
 
         this.renderer.render(this.scene, this.camera);
     }
