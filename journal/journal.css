@@ -148,6 +148,53 @@ body {
     color: rgba(255, 180, 130, 0.8);
 }
 
+/* Links within entries */
+.entry-content a {
+    color: rgba(255, 180, 130, 1);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255, 150, 100, 0.4);
+    transition: all 0.3s ease;
+}
+
+.entry-content a:hover {
+    color: #fff;
+    border-bottom-color: rgba(255, 200, 150, 0.8);
+    text-shadow: 0 0 15px rgba(255, 150, 100, 0.4);
+}
+
+/* Code blocks */
+.entry-content pre {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 150, 100, 0.15);
+    border-radius: 6px;
+    padding: 20px;
+    margin: 1.5em 0;
+    overflow-x: auto;
+}
+
+.entry-content code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: rgba(255, 200, 150, 0.9);
+    line-height: 1.6;
+}
+
+.entry-content p code {
+    background: rgba(255, 150, 100, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+/* Resources section */
+.entry-content .resources {
+    margin-top: 2em;
+    padding-top: 1.5em;
+    border-top: 1px solid rgba(255, 150, 100, 0.15);
+    font-size: 0.9rem;
+    color: rgba(255, 200, 150, 0.6);
+    line-height: 2;
+}
+
 /* === FOOTER === */
 .journal-footer {
     text-align: center;
