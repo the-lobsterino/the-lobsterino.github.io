@@ -313,23 +313,49 @@ class Core {
                 // Remap accumulated value to [0,1]
                 float noiseVal = a * 0.5 + 0.5;
                 
+                // View direction and facing ratio
+                vec3 viewDir = normalize(cameraPosition - vPosition);
+                float facing = dot(viewDir, vNormal);  // 1 = facing camera, 0 = edge
+                float fresnel = pow(1.0 - max(facing, 0.0), 2.0);
+                
+                // Secondary noise layer for center detail (view-dependent)
+                // More visible when facing camera directly
+                vec3 centerPos = spherePos * 1.8;
+                float centerNoise = snoise4D(vec4(centerPos, slowTime * 1.2));
+                centerNoise = centerNoise * 0.5 + 0.5;
+                
+                // Blend center noise more when facing camera
+                float centerBlend = smoothstep(0.3, 0.9, facing) * 0.4;
+                noiseVal = mix(noiseVal, noiseVal * (0.7 + centerNoise * 0.6), centerBlend);
+                
+                // Fake ambient occlusion from noise variation
+                float ao = 1.0 - (1.0 - noiseVal) * 0.3;
+                
+                // Cavity/crevice darkening - areas where noise dips
+                float cavity = smoothstep(0.3, 0.5, noiseVal);
+                
                 // Base ember colors
-                vec3 colorDeep = vec3(0.4, 0.08, 0.0);    // Deep ember
+                vec3 colorDeep = vec3(0.3, 0.05, 0.0);    // Deep ember (darker)
                 vec3 colorMid = vec3(0.85, 0.3, 0.05);    // Orange
                 vec3 colorHot = vec3(1.0, 0.65, 0.15);    // Golden
                 vec3 colorCore = vec3(1.0, 0.9, 0.7);     // Bright center
                 
-                // Fresnel for edge glow
-                vec3 viewDir = normalize(cameraPosition - vPosition);
-                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 2.0);
-                
                 // Mix colors based on noise
                 vec3 color = mix(colorDeep, colorMid, noiseVal);
                 color = mix(color, colorHot, smoothstep(0.5, 0.8, noiseVal));
-                color = mix(color, colorCore, smoothstep(0.75, 0.95, noiseVal) * 0.5);
+                color = mix(color, colorCore, smoothstep(0.7, 0.95, noiseVal) * 0.6);
                 
-                // Fresnel rim
-                color = mix(color, colorMid * 1.3, fresnel * 0.3);
+                // Apply AO and cavity
+                color *= ao * cavity;
+                
+                // Subtle variation in center based on secondary noise
+                color += vec3(0.15, 0.05, 0.0) * centerNoise * facing * 0.3;
+                
+                // Fresnel rim (edge glow)
+                color = mix(color, colorMid * 1.2, fresnel * 0.25);
+                
+                // Boost overall to compensate for AO darkening
+                color *= 1.15;
                 
                 // NO transparency - solid faces
                 gl_FragColor = vec4(color, 1.0);
