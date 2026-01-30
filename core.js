@@ -42,28 +42,6 @@ class Core {
         this.animate();
     }
 
-    createGlowTexture() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
-        const ctx = canvas.getContext('2d');
-        
-        // Larger, softer corona glow
-        const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
-        gradient.addColorStop(0, 'rgba(255, 220, 180, 0.9)');
-        gradient.addColorStop(0.15, 'rgba(255, 160, 80, 0.6)');
-        gradient.addColorStop(0.35, 'rgba(255, 100, 40, 0.3)');
-        gradient.addColorStop(0.55, 'rgba(255, 70, 25, 0.12)');
-        gradient.addColorStop(0.75, 'rgba(255, 50, 20, 0.04)');
-        gradient.addColorStop(1, 'rgba(255, 40, 15, 0)');
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 512, 512);
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        return texture;
-    }
-
     createCore() {
         // Vertex shader - Perlin noise displacement (waelyasmina approach)
         const vertexShader = `
@@ -357,50 +335,25 @@ class Core {
                 float albedoNoise = albedoNoise1 + albedoNoise2;
                 float albedo = 0.75 + albedoNoise * 0.25;  // More visible variation 0.5-1.0
                 
-                // === SOLAR FLARES / PROMINENCES ===
-                // Calculate flare intensity using directional noise
-                vec3 flareDir = normalize(vPosition);
-                float flareNoise = snoise4D(vec4(flareDir * 3.0, slowTime * 0.5));
-                float flareNoise2 = snoise4D(vec4(flareDir * 6.0 + 10.0, slowTime * 0.3));
-                
-                // Flares emerge from specific regions (like solar active regions)
-                float flareRegion = smoothstep(0.6, 1.0, flareNoise * 0.5 + 0.5);
-                float flareTurbulence = abs(flareNoise2) * flareRegion;
-                
                 // Wider color spectrum (1.2x expansion)
                 vec3 colorDark = vec3(0.12, 0.02, 0.0);    // Deep sunspots
-                vec3 colorCold = vec3(0.25, 0.04, 0.0);    // Dark ember / sunspots
+                vec3 colorCold = vec3(0.25, 0.04, 0.0);    // Dark ember
                 vec3 colorWarm = vec3(0.85, 0.28, 0.02);   // Orange plasma
                 vec3 colorHot = vec3(1.0, 0.55, 0.12);     // Hot yellow-orange
                 vec3 colorBright = vec3(1.0, 0.82, 0.5);   // Warm white
-                vec3 colorFlare = vec3(1.0, 0.9, 0.7);     // Flare bright
                 
-                // Color based on emission intensity (like blackbody radiation)
-                // Expanded range for more variation
+                // Color based on emission intensity
                 vec3 color = mix(colorDark, colorCold, smoothstep(0.0, 0.25, emission));
                 color = mix(color, colorWarm, smoothstep(0.2, 0.5, emission));
                 color = mix(color, colorHot, smoothstep(0.45, 0.75, emission));
                 color = mix(color, colorBright, smoothstep(0.7, 0.95, emission) * 0.5);
                 
-                // Add flare brightness to active regions
-                color = mix(color, colorFlare, flareTurbulence * 0.4);
-                
-                // Apply albedo - creates surface texture variation
+                // Apply albedo
                 color *= albedo;
                 
-                // === TRANSLUCENT TURBULENCE / NEBULOUS EFFECT ===
-                // Additional layer of turbulent brightness variation
-                float turbulence = snoise4D(vec4(spherePos * 2.5, slowTime * 0.8));
-                turbulence = turbulence * 0.5 + 0.5;
-                turbulence = smoothstep(0.3, 0.7, turbulence);
-                color += colorWarm * turbulence * 0.15;
+                // Fresnel - subtle limb effect
+                color = mix(color, colorWarm * 1.1, fresnel * 0.15);
                 
-                // Fresnel - limb darkening with slight corona glow
-                float corona = pow(fresnel, 1.5) * 0.25;
-                color = mix(color, colorWarm * 0.8, fresnel * 0.2);
-                color += colorFlare * corona * 0.3;  // Corona glow at edges
-                
-                // NO transparency - solid faces
                 gl_FragColor = vec4(color, 1.0);
             }
         `;
@@ -424,19 +377,120 @@ class Core {
         this.core = new THREE.Mesh(geometry, this.coreMaterial);
         this.scene.add(this.core);
 
-        // Add glow as a simple sprite behind the core
-        const glowTexture = this.createGlowTexture();
-        const glowMaterial = new THREE.SpriteMaterial({
-            map: glowTexture,
-            color: 0xff6622,
+        // === CORONA - visible halo with rays ===
+        this.createCorona();
+    }
+
+    createCorona() {
+        // Corona shader - visible rays extending outward
+        const coronaVert = `
+            varying vec2 vUv;
+            varying vec3 vPos;
+            void main() {
+                vUv = uv;
+                vPos = position;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+        
+        const coronaFrag = `
+            precision highp float;
+            uniform float uTime;
+            varying vec2 vUv;
+            varying vec3 vPos;
+            
+            // Simple noise
+            float hash(vec2 p) {
+                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+            }
+            
+            float noise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(
+                    mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+                    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+                    f.y
+                );
+            }
+            
+            float fbm(vec2 p) {
+                float v = 0.0;
+                float a = 0.5;
+                for (int i = 0; i < 4; i++) {
+                    v += a * noise(p);
+                    p *= 2.0;
+                    a *= 0.5;
+                }
+                return v;
+            }
+            
+            void main() {
+                // Distance from center (0,0)
+                vec2 center = vUv - 0.5;
+                float dist = length(center);
+                float angle = atan(center.y, center.x);
+                
+                // Inner and outer radius of corona ring
+                float innerR = 0.28;
+                float outerR = 0.5;
+                
+                // Only render in the corona ring
+                if (dist < innerR || dist > outerR) discard;
+                
+                // Radial position in corona (0 = inner edge, 1 = outer edge)
+                float radialPos = (dist - innerR) / (outerR - innerR);
+                
+                // Slow time
+                float t = uTime * 0.03;
+                
+                // Corona rays - noise based on angle
+                float rays = fbm(vec2(angle * 8.0 + t, dist * 3.0 - t * 0.5));
+                rays += fbm(vec2(angle * 12.0 - t * 0.7, dist * 5.0)) * 0.5;
+                
+                // Streamers - longer features
+                float streamers = fbm(vec2(angle * 3.0 + t * 0.2, dist * 2.0));
+                streamers = pow(streamers, 1.5);
+                
+                // Combine
+                float corona = rays * 0.6 + streamers * 0.4;
+                
+                // Fade towards outer edge
+                float fade = 1.0 - pow(radialPos, 0.8);
+                fade *= smoothstep(0.0, 0.15, radialPos);  // Fade at inner edge too
+                
+                corona *= fade;
+                
+                // Corona colors - orangey glow
+                vec3 colorInner = vec3(1.0, 0.7, 0.3);
+                vec3 colorOuter = vec3(1.0, 0.4, 0.1);
+                vec3 color = mix(colorInner, colorOuter, radialPos);
+                
+                // Final alpha
+                float alpha = corona * 0.7;
+                
+                gl_FragColor = vec4(color, alpha);
+            }
+        `;
+        
+        // Plane facing camera
+        const coronaGeom = new THREE.PlaneGeometry(16, 16);
+        this.coronaMaterial = new THREE.ShaderMaterial({
+            vertexShader: coronaVert,
+            fragmentShader: coronaFrag,
+            uniforms: {
+                uTime: { value: 0 }
+            },
             transparent: true,
             blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide,
             depthWrite: false
         });
-        this.glow = new THREE.Sprite(glowMaterial);
-        this.glow.scale.set(6, 6, 1);  // Larger corona
-        this.glow.position.z = -0.5;
-        this.scene.add(this.glow);
+        
+        this.corona = new THREE.Mesh(coronaGeom, this.coronaMaterial);
+        this.corona.position.z = -0.1;  // Slightly behind core
+        this.scene.add(this.corona);
     }
 
     createParticles() {
@@ -548,9 +602,8 @@ class Core {
         // Update uniforms
         this.coreMaterial.uniforms.uTime.value = this.time;
         this.coreMaterial.uniforms.uMouse.value.set(this.mouse.x, this.mouse.y);
-        // Pulse glow scale - slower, gentler breathing
-        const glowPulse = 1 + Math.sin(this.time * 0.2) * 0.04;
-        this.glow.scale.set(6 * glowPulse, 6 * glowPulse, 1);
+        // Update corona
+        this.coronaMaterial.uniforms.uTime.value = this.time;
         this.particles.material.uniforms.uTime.value = this.time;
 
         // Subtle core rotation
@@ -560,7 +613,8 @@ class Core {
         // Core follows mouse slightly
         this.core.position.x = this.mouse.x * 0.2;
         this.core.position.y = this.mouse.y * 0.2;
-        this.glow.position.copy(this.core.position);
+        this.corona.position.x = this.core.position.x;
+        this.corona.position.y = this.core.position.y;
 
         this.renderer.render(this.scene, this.camera);
     }
