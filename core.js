@@ -175,7 +175,7 @@ class Core {
             }
         `;
 
-        // Fragment shader - warm ember glow
+        // Fragment shader - XorDev turbulence + warm ember glow
         const fragmentShader = `
             uniform float uTime;
             uniform vec2 uMouse;
@@ -183,41 +183,103 @@ class Core {
             varying vec3 vNormal;
             varying vec3 vPosition;
             
+            // XorDev turbulence constants
+            #define TURB_NUM 6.0
+            #define TURB_AMP 0.5
+            #define TURB_SPEED 0.2
+            #define TURB_FREQ 2.0
+            #define TURB_EXP 1.5
+            
+            // Simple hash for noise
+            float hash(vec2 p) {
+                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+            }
+            
+            float noise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(
+                    mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+                    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+                    f.y
+                );
+            }
+            
+            // FBM noise
+            float fbm(vec2 p) {
+                float v = 0.0;
+                float a = 0.5;
+                mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
+                for (int i = 0; i < 4; i++) {
+                    v += a * noise(p);
+                    p = rot * p * 2.0;
+                    a *= 0.5;
+                }
+                return v;
+            }
+            
+            // XorDev turbulence distortion
+            vec2 turbulence(vec2 pos, float time) {
+                float freq = TURB_FREQ;
+                mat2 rot = mat2(0.6, -0.8, 0.8, 0.6);
+                
+                for (float i = 0.0; i < TURB_NUM; i++) {
+                    float phase = freq * (pos * rot).y + TURB_SPEED * time + i;
+                    pos += TURB_AMP * rot[0] * sin(phase) / freq;
+                    rot *= mat2(0.6, -0.8, 0.8, 0.6);
+                    freq *= TURB_EXP;
+                }
+                return pos;
+            }
+            
             void main() {
                 // Base ember colors
-                vec3 colorDeep = vec3(0.6, 0.15, 0.0);    // Deep ember
-                vec3 colorMid = vec3(0.9, 0.4, 0.1);      // Orange
-                vec3 colorHot = vec3(1.0, 0.75, 0.3);     // Golden
-                vec3 colorCore = vec3(1.0, 0.95, 0.8);    // White-hot center
+                vec3 colorDeep = vec3(0.5, 0.1, 0.0);     // Deep ember
+                vec3 colorMid = vec3(0.9, 0.35, 0.05);    // Orange
+                vec3 colorHot = vec3(1.0, 0.7, 0.2);      // Golden
+                vec3 colorCore = vec3(1.0, 0.95, 0.85);   // White-hot center
                 
                 // Fresnel for edge glow
                 vec3 viewDir = normalize(cameraPosition - vPosition);
-                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
+                float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 2.5);
                 
-                // Pulsing intensity
-                float pulse = sin(uTime * 0.8) * 0.5 + 0.5;
-                float pulse2 = sin(uTime * 1.3 + 1.0) * 0.5 + 0.5;
+                // Apply XorDev turbulence to UV coordinates
+                vec2 turbUv = turbulence(vUv * 3.0, uTime);
+                
+                // FBM noise on turbulent coordinates for organic texture
+                float n1 = fbm(turbUv * 2.0 + uTime * 0.1);
+                float n2 = fbm(turbUv * 4.0 - uTime * 0.15);
+                float turbNoise = n1 * 0.6 + n2 * 0.4;
                 
                 // Distance from center for core glow
                 float dist = length(vPosition);
-                float coreFactor = smoothstep(0.8, 0.0, dist);
+                float coreFactor = smoothstep(1.0, 0.0, dist);
                 
-                // Mix colors based on position and fresnel
-                vec3 color = mix(colorDeep, colorMid, fresnel * 0.5 + pulse * 0.3);
-                color = mix(color, colorHot, coreFactor * 0.6);
-                color = mix(color, colorCore, coreFactor * coreFactor * 0.4);
+                // Combine turbulence with position-based coloring
+                float intensity = turbNoise * (0.7 + coreFactor * 0.3);
                 
-                // Add pulse variation
-                color += vec3(0.1, 0.05, 0.0) * pulse2 * (1.0 - fresnel);
+                // Pulsing
+                float pulse = sin(uTime * 0.7) * 0.5 + 0.5;
+                intensity += pulse * 0.1;
                 
-                // Edge highlight
-                color += vec3(0.3, 0.1, 0.0) * fresnel;
+                // Mix colors based on turbulence intensity and position
+                vec3 color = mix(colorDeep, colorMid, intensity);
+                color = mix(color, colorHot, intensity * coreFactor);
+                color = mix(color, colorCore, pow(coreFactor, 2.0) * intensity * 0.5);
+                
+                // Fresnel edge glow (ember rim)
+                color = mix(color, colorMid * 1.2, fresnel * 0.4);
+                
+                // Hot spots from turbulence
+                float hotSpots = smoothstep(0.55, 0.75, turbNoise);
+                color = mix(color, colorHot, hotSpots * 0.3 * (1.0 - fresnel));
                 
                 // Subtle mouse interaction
-                color += vec3(0.05, 0.02, 0.0) * (uMouse.x + uMouse.y) * 0.5;
+                color += vec3(0.05, 0.02, 0.0) * (uMouse.x + uMouse.y) * 0.3;
                 
                 // Alpha with soft edges
-                float alpha = 1.0 - fresnel * 0.3;
+                float alpha = 1.0 - fresnel * 0.2;
                 alpha *= 0.95;
                 
                 gl_FragColor = vec4(color, alpha);
