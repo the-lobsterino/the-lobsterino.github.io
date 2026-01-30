@@ -345,9 +345,12 @@ class Core {
                 // More contrast for visible variation
                 emission = smoothstep(0.2, 0.8, emission);
                 
-                // Albedo layer - subtle surface variation independent of emission
-                float albedoNoise = snoise4D(vec4(spherePos * 3.0, slowTime * 0.5));
-                float albedo = 0.85 + albedoNoise * 0.15;  // Subtle variation 0.7-1.0
+                // Albedo layer - surface variation independent of emission
+                // Multiple octaves for richer texture
+                float albedoNoise1 = snoise4D(vec4(spherePos * 4.0, slowTime * 0.3));
+                float albedoNoise2 = snoise4D(vec4(spherePos * 8.0, slowTime * 0.2)) * 0.5;
+                float albedoNoise = albedoNoise1 + albedoNoise2;
+                float albedo = 0.75 + albedoNoise * 0.25;  // More visible variation 0.5-1.0
                 
                 // Ember emission colors (toned down, less aggressive yellow)
                 vec3 colorCold = vec3(0.2, 0.03, 0.0);    // Dark ember / sunspots
