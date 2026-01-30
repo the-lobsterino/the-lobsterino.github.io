@@ -264,34 +264,55 @@ class Core {
                     + dot(m1*m1, vec2(dot(p3, x3), dot(p4, x4))));
             }
             
-            // FBM using 4D noise
-            float fbm4D(vec3 pos, float time) {
-                float v = 0.0;
-                float a = 0.5;
-                vec3 shift = vec3(100.0);
-                for (int i = 0; i < 4; i++) {
-                    v += a * snoise4D(vec4(pos, time));
-                    pos = pos * 2.0 + shift;
-                    time *= 1.1;
-                    a *= 0.5;
-                }
-                return v;
+            // 3D rotation matrix
+            mat3 rotate3D(float angle, vec3 axis) {
+                vec3 a = normalize(axis);
+                float s = sin(angle);
+                float c = cos(angle);
+                float oc = 1.0 - c;
+                return mat3(
+                    oc * a.x * a.x + c,       oc * a.x * a.y - a.z * s, oc * a.z * a.x + a.y * s,
+                    oc * a.x * a.y + a.z * s, oc * a.y * a.y + c,       oc * a.y * a.z - a.x * s,
+                    oc * a.z * a.x - a.y * s, oc * a.y * a.z + a.x * s, oc * a.z * a.z + c
+                );
             }
             
             void main() {
                 // Normalize position to use as 3D texture coordinate
-                vec3 spherePos = normalize(vPosition) * 2.0;
+                // Smaller scale = more detail
+                vec3 spherePos = normalize(vPosition) * 3.5;
                 
-                // Slow time for smooth animation
+                // Slow time for smooth animation (keep this stable)
                 float slowTime = uTime * 0.15;
                 
-                // 4D noise: 3D position + time
-                float n1 = fbm4D(spherePos, slowTime);
-                float n2 = fbm4D(spherePos * 1.5 + vec3(50.0), slowTime * 0.8);
-                float noiseVal = n1 * 0.6 + n2 * 0.4;
+                // Domain warping loop (inspired by Carlos's shader)
+                // Iterative feedback creates organic flowing patterns
+                vec3 p = spherePos;
+                vec3 n = vec3(0.0);  // Accumulated displacement
+                float a = 0.0;       // Accumulated intensity
+                float S = 8.0;       // Starting scale
+                mat3 m = rotate3D(1.2, vec3(0.5, 0.8, 0.3));  // Rotation matrix
                 
-                // Remap noise from [-1,1] to [0,1]
-                noiseVal = noiseVal * 0.5 + 0.5;
+                for (float j = 0.0; j < 7.0; j++) {
+                    p = m * p;  // Rotate
+                    n = m * n;  // Rotate accumulated
+                    
+                    // 4D sample point: warped 3D pos + time
+                    vec4 q = vec4(p * S + n + j * 0.5, slowTime + j * 0.1);
+                    
+                    // Add noise contribution
+                    float noiseVal = snoise4D(q);
+                    a += noiseVal / S;
+                    
+                    // Feedback: accumulate displacement
+                    n += vec3(noiseVal) * 0.3;
+                    
+                    // Scale up for next octave
+                    S *= 1.4;
+                }
+                
+                // Remap accumulated value to [0,1]
+                float noiseVal = a * 0.5 + 0.5;
                 
                 // Base ember colors
                 vec3 colorDeep = vec3(0.4, 0.08, 0.0);    // Deep ember
