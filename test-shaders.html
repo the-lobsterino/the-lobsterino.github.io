@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shader Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+<canvas id="webgl" style="width:100%;height:100%;position:fixed;top:0;left:0;"></canvas>
+<pre id="log" style="position:fixed;top:10px;left:10px;color:lime;background:rgba(0,0,0,0.8);padding:10px;max-height:90vh;overflow:auto;z-index:1000;font-size:12px;"></pre>
+<script>
+const log = (msg) => {
+    document.getElementById('log').textContent += msg + '\n';
+    console.log(msg);
+};
+
+const logError = (msg) => {
+    document.getElementById('log').textContent += '❌ ' + msg + '\n';
+    console.error(msg);
+};
+
+log('Starting shader tests...');
+
+// Test WebGL availability
+const canvas = document.getElementById('webgl');
+const gl = canvas.getContext('webgl');
+if (!gl) {
+    logError('WebGL not available!');
+} else {
+    log('✅ WebGL available');
+}
+
+// Load and test core.js
+const script = document.createElement('script');
+script.src = 'core.js';
+script.onload = () => {
+    log('✅ core.js loaded');
+    
+    // Check for THREE.js errors
+    setTimeout(() => {
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        const info = renderer.info;
+        log('✅ THREE.js renderer created');
+        log('Programs: ' + info.programs?.length);
+        
+        // Check for shader compilation errors by looking at console
+        log('\n=== Shader test complete ===');
+        log('Check console for any red errors.');
+    }, 1000);
+};
+script.onerror = () => logError('Failed to load core.js');
+document.body.appendChild(script);
+
+// Capture all errors
+window.onerror = (msg, url, line, col, error) => {
+    logError(`${msg} at ${url}:${line}:${col}`);
+};
+
+// Capture WebGL errors
+const origGetShaderInfoLog = WebGLRenderingContext.prototype.getShaderInfoLog;
+WebGLRenderingContext.prototype.getShaderInfoLog = function(shader) {
+    const log = origGetShaderInfoLog.call(this, shader);
+    if (log && log.trim()) {
+        logError('Shader log: ' + log);
+    }
+    return log;
+};
+
+const origGetProgramInfoLog = WebGLRenderingContext.prototype.getProgramInfoLog;
+WebGLRenderingContext.prototype.getProgramInfoLog = function(program) {
+    const log = origGetProgramInfoLog.call(this, program);
+    if (log && log.trim()) {
+        logError('Program log: ' + log);
+    }
+    return log;
+};
+</script>
+</body>
+</html>
