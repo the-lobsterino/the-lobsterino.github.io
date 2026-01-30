@@ -17,6 +17,9 @@ class Core {
         const isMobile = window.innerWidth < 768;
         const isSmallMobile = window.innerWidth < 400;
         this.camera.position.z = isSmallMobile ? 18.0 : (isMobile ? 16.0 : 14.0);
+        this.camera.position.x = 0;
+        this.camera.position.y = 0;
+        this.camera.lookAt(0, 0, 0);
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ 
@@ -578,6 +581,9 @@ class Core {
         const isMobile = window.innerWidth < 768;
         const isSmallMobile = window.innerWidth < 400;
         this.camera.position.z = isSmallMobile ? 18.0 : (isMobile ? 16.0 : 14.0);
+        this.camera.position.x = 0;
+        this.camera.position.y = 0;
+        this.camera.lookAt(0, 0, 0);
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         
