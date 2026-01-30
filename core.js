@@ -44,18 +44,21 @@ class Core {
 
     createGlowTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
+        canvas.width = 512;
+        canvas.height = 512;
         const ctx = canvas.getContext('2d');
         
-        const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-        gradient.addColorStop(0, 'rgba(255, 200, 150, 0.8)');
-        gradient.addColorStop(0.3, 'rgba(255, 120, 50, 0.4)');
-        gradient.addColorStop(0.6, 'rgba(255, 80, 30, 0.15)');
-        gradient.addColorStop(1, 'rgba(255, 50, 20, 0)');
+        // Larger, softer corona glow
+        const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+        gradient.addColorStop(0, 'rgba(255, 220, 180, 0.9)');
+        gradient.addColorStop(0.15, 'rgba(255, 160, 80, 0.6)');
+        gradient.addColorStop(0.35, 'rgba(255, 100, 40, 0.3)');
+        gradient.addColorStop(0.55, 'rgba(255, 70, 25, 0.12)');
+        gradient.addColorStop(0.75, 'rgba(255, 50, 20, 0.04)');
+        gradient.addColorStop(1, 'rgba(255, 40, 15, 0)');
         
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 256, 256);
+        ctx.fillRect(0, 0, 512, 512);
         
         const texture = new THREE.CanvasTexture(canvas);
         return texture;
@@ -164,8 +167,9 @@ class Core {
                 vNormal = normal;
                 
                 // Waelyasmina approach: pnoise with time animation
-                // Reduced from 3.0 to 2.0 to minimize triangle overlap
-                float noise = 2.0 * pnoise(position + uTime, vec3(10.0));
+                // Slowed to 0.4x speed for gentler breathing
+                float slowTime = uTime * 0.4;
+                float noise = 2.0 * pnoise(position + slowTime, vec3(10.0));
                 
                 float displacement = noise / 10.0;
                 
@@ -279,10 +283,11 @@ class Core {
             
             void main() {
                 // Normalize position to use as 3D texture coordinate
-                vec3 spherePos = normalize(vPosition) * 2.2;
+                // Scale 1.5x larger (reduced from 2.2 to ~1.47)
+                vec3 spherePos = normalize(vPosition) * 1.47;
                 
-                // Slow time for smooth animation (keep this stable)
-                float slowTime = uTime * 0.15;
+                // Slow time for smooth animation - 0.4x slower
+                float slowTime = uTime * 0.06;
                 
                 // Domain warping loop (inspired by Carlos's shader)
                 // Iterative feedback creates organic flowing patterns
@@ -352,22 +357,48 @@ class Core {
                 float albedoNoise = albedoNoise1 + albedoNoise2;
                 float albedo = 0.75 + albedoNoise * 0.25;  // More visible variation 0.5-1.0
                 
-                // Ember emission colors (toned down, less aggressive yellow)
-                vec3 colorCold = vec3(0.2, 0.03, 0.0);    // Dark ember / sunspots
-                vec3 colorWarm = vec3(0.8, 0.25, 0.02);   // Orange plasma
-                vec3 colorHot = vec3(0.95, 0.5, 0.1);     // Softer warm yellow
-                vec3 colorBright = vec3(1.0, 0.75, 0.4);  // Warm white (less harsh)
+                // === SOLAR FLARES / PROMINENCES ===
+                // Calculate flare intensity using directional noise
+                vec3 flareDir = normalize(vPosition);
+                float flareNoise = snoise4D(vec4(flareDir * 3.0, slowTime * 0.5));
+                float flareNoise2 = snoise4D(vec4(flareDir * 6.0 + 10.0, slowTime * 0.3));
+                
+                // Flares emerge from specific regions (like solar active regions)
+                float flareRegion = smoothstep(0.6, 1.0, flareNoise * 0.5 + 0.5);
+                float flareTurbulence = abs(flareNoise2) * flareRegion;
+                
+                // Wider color spectrum (1.2x expansion)
+                vec3 colorDark = vec3(0.12, 0.02, 0.0);    // Deep sunspots
+                vec3 colorCold = vec3(0.25, 0.04, 0.0);    // Dark ember / sunspots
+                vec3 colorWarm = vec3(0.85, 0.28, 0.02);   // Orange plasma
+                vec3 colorHot = vec3(1.0, 0.55, 0.12);     // Hot yellow-orange
+                vec3 colorBright = vec3(1.0, 0.82, 0.5);   // Warm white
+                vec3 colorFlare = vec3(1.0, 0.9, 0.7);     // Flare bright
                 
                 // Color based on emission intensity (like blackbody radiation)
-                vec3 color = mix(colorCold, colorWarm, smoothstep(0.0, 0.4, emission));
-                color = mix(color, colorHot, smoothstep(0.35, 0.7, emission));
-                color = mix(color, colorBright, smoothstep(0.75, 1.0, emission) * 0.4);
+                // Expanded range for more variation
+                vec3 color = mix(colorDark, colorCold, smoothstep(0.0, 0.25, emission));
+                color = mix(color, colorWarm, smoothstep(0.2, 0.5, emission));
+                color = mix(color, colorHot, smoothstep(0.45, 0.75, emission));
+                color = mix(color, colorBright, smoothstep(0.7, 0.95, emission) * 0.5);
+                
+                // Add flare brightness to active regions
+                color = mix(color, colorFlare, flareTurbulence * 0.4);
                 
                 // Apply albedo - creates surface texture variation
                 color *= albedo;
                 
-                // Fresnel - subtle limb brightening
-                color = mix(color, colorWarm * 1.1, fresnel * 0.15);
+                // === TRANSLUCENT TURBULENCE / NEBULOUS EFFECT ===
+                // Additional layer of turbulent brightness variation
+                float turbulence = snoise4D(vec4(spherePos * 2.5, slowTime * 0.8));
+                turbulence = turbulence * 0.5 + 0.5;
+                turbulence = smoothstep(0.3, 0.7, turbulence);
+                color += colorWarm * turbulence * 0.15;
+                
+                // Fresnel - limb darkening with slight corona glow
+                float corona = pow(fresnel, 1.5) * 0.25;
+                color = mix(color, colorWarm * 0.8, fresnel * 0.2);
+                color += colorFlare * corona * 0.3;  // Corona glow at edges
                 
                 // NO transparency - solid faces
                 gl_FragColor = vec4(color, 1.0);
@@ -403,7 +434,7 @@ class Core {
             depthWrite: false
         });
         this.glow = new THREE.Sprite(glowMaterial);
-        this.glow.scale.set(4, 4, 1);
+        this.glow.scale.set(6, 6, 1);  // Larger corona
         this.glow.position.z = -0.5;
         this.scene.add(this.glow);
     }
@@ -517,9 +548,9 @@ class Core {
         // Update uniforms
         this.coreMaterial.uniforms.uTime.value = this.time;
         this.coreMaterial.uniforms.uMouse.value.set(this.mouse.x, this.mouse.y);
-        // Pulse glow scale
-        const glowPulse = 1 + Math.sin(this.time * 0.5) * 0.05;
-        this.glow.scale.set(4 * glowPulse, 4 * glowPulse, 1);
+        // Pulse glow scale - slower, gentler breathing
+        const glowPulse = 1 + Math.sin(this.time * 0.2) * 0.04;
+        this.glow.scale.set(6 * glowPulse, 6 * glowPulse, 1);
         this.particles.material.uniforms.uTime.value = this.time;
 
         // Subtle core rotation
