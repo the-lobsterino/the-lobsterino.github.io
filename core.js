@@ -279,8 +279,7 @@ class Core {
             
             void main() {
                 // Normalize position to use as 3D texture coordinate
-                // Smaller scale = more detail
-                vec3 spherePos = normalize(vPosition) * 3.5;
+                vec3 spherePos = normalize(vPosition) * 2.2;
                 
                 // Slow time for smooth animation (keep this stable)
                 float slowTime = uTime * 0.15;
