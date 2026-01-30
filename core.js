@@ -625,13 +625,19 @@ class Core {
         this.core.rotation.y += 0.002;
         this.core.rotation.x = this.mouse.y * 0.1;
 
-        // Core follows mouse slightly
+        // Core follows mouse slightly with vertical centering offset for mobile
+        const isMobile = window.innerWidth < 768;
+        const yOffset = isMobile ? 8.5 : 0;  // Push up on mobile to visually center
         this.core.position.x = this.mouse.x * 0.2;
-        this.core.position.y = this.mouse.y * 0.2;
+        this.core.position.y = this.mouse.y * 0.2 + yOffset;
         
-        // Update corona uniforms
+        // Update corona position to match core (normalized screen coords)
         this.coronaMaterial.uniforms.uTime.value = this.time;
-        this.coronaMaterial.uniforms.uCorePosition.value.set(this.core.position.x / 5, this.core.position.y / 5, 0);
+        this.coronaMaterial.uniforms.uCorePosition.value.set(
+            this.core.position.x / 5,
+            this.core.position.y / 5,
+            0
+        );
 
         this.renderer.render(this.scene, this.camera);
     }
