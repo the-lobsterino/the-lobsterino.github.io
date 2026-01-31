@@ -19,7 +19,11 @@ class Core {
         this.camera.position.z = isSmallMobile ? 18.0 : (isMobile ? 16.0 : 14.0);
         this.camera.position.x = 0;
         this.camera.position.y = 0;
-        this.camera.lookAt(0, 0, 0);
+        
+        // Compensate for portrait aspect ratio visual offset
+        const aspect = window.innerWidth / window.innerHeight;
+        const lookAtY = aspect < 1 ? -4.0 : 0;
+        this.camera.lookAt(0, lookAtY, 0);
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ 
@@ -378,14 +382,12 @@ class Core {
         });
 
         this.core = new THREE.Mesh(geometry, this.coreMaterial);
-        this.core.position.set(0, 0, 0);
         this.scene.add(this.core);
-
-        // === CORONA - visible halo with rays ===
-        this.createCorona();
+        // Corona is now rendered separately via corona.js (CSS-centered)
     }
 
-    createCorona() {
+    _removedCorona() {
+        // Corona code moved to corona.js for CSS-based centering
         // Corona as a fullscreen quad BEHIND the core with raymarched glow
         const coronaVert = `
             varying vec2 vUv;
@@ -584,14 +586,14 @@ class Core {
         this.camera.position.z = isSmallMobile ? 18.0 : (isMobile ? 16.0 : 14.0);
         this.camera.position.x = 0;
         this.camera.position.y = 0;
-        this.camera.lookAt(0, 0, 0);
+        
+        // Compensate for portrait aspect ratio visual offset
+        const aspect = window.innerWidth / window.innerHeight;
+        const lookAtY = aspect < 1 ? -4.0 : 0;
+        this.camera.lookAt(0, lookAtY, 0);
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         
-        // Update corona resolution
-        if (this.coronaMaterial) {
-            this.coronaMaterial.uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
-        }
     }
 
     onMouseMove(e) {
@@ -618,30 +620,14 @@ class Core {
         // Update uniforms
         this.coreMaterial.uniforms.uTime.value = this.time;
         this.coreMaterial.uniforms.uMouse.value.set(this.mouse.x, this.mouse.y);
-        // Update corona
-        this.coronaMaterial.uniforms.uTime.value = this.time;
         this.particles.material.uniforms.uTime.value = this.time;
 
         // Subtle core rotation
         this.core.rotation.y += 0.002;
         this.core.rotation.x = this.mouse.y * 0.1;
 
-        // Core follows mouse slightly with vertical centering offset for mobile
-        const isMobile = window.innerWidth < 768;
-        const yOffset = isMobile ? 8.5 : 0;  // Push up on mobile to visually center
-        this.core.position.x = this.mouse.x * 0.2;
-        this.core.position.y = this.mouse.y * 0.2 + yOffset;
-        
-        // Update corona position to match core (project to screen space)
-        this.coronaMaterial.uniforms.uTime.value = this.time;
-        
-        // Project core center to normalized device coordinates
-        const coreScreenPos = this.core.position.clone().project(this.camera);
-        this.coronaMaterial.uniforms.uCorePosition.value.set(
-            coreScreenPos.x,
-            coreScreenPos.y,
-            0
-        );
+        // Core stays fixed at origin
+        this.core.position.set(0, 0, 0);
 
         this.renderer.render(this.scene, this.camera);
     }
@@ -649,10 +635,25 @@ class Core {
 
 // Initialize when DOM is ready
 function initCore() {
-    new Core();
+    try {
+        // Check for WebGL support
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (!gl) throw new Error('No WebGL');
+        
+        new Core();
+    } catch (e) {
+        console.log('WebGL not available, showing CSS fallback');
+        // Add CSS fallback class
+        document.body.classList.add('no-webgl');
+        
+        // Create a simple CSS-based core as fallback
+        const fallback = document.createElement('div');
+        fallback.className = 'core-fallback';
+        fallback.innerHTML = '<div class="core-fallback-inner"></div>';
+        document.querySelector('.sanctuary').appendChild(fallback);
+    }
 }
-// No try-catch, no fallback. If WebGL fails, let it fail loudly.
-// Fix the root cause, don't mask it.
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initCore);
