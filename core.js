@@ -378,6 +378,7 @@ class Core {
         });
 
         this.core = new THREE.Mesh(geometry, this.coreMaterial);
+        this.core.position.set(0, 0, 0);
         this.scene.add(this.core);
 
         // === CORONA - visible halo with rays ===
