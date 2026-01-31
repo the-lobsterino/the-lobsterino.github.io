@@ -94,17 +94,17 @@ class Corona {
                 // Core radius (normalized to square canvas)
                 float coreR = 0.28;
                 
-                // Animated rays
-                float t = uTime * 0.15;
+                // Animated rays - more dramatic movement
+                float t = uTime * 0.35;
                 
                 float rays = 0.0;
-                rays += fbm(vec2(angle * 8.0 + t, dist * 4.0)) * 0.5;
-                rays += fbm(vec2(angle * 12.0 - t * 0.7, dist * 6.0)) * 0.3;
-                rays += fbm(vec2(angle * 4.0 + t * 0.3, dist * 2.0)) * 0.4;
+                rays += fbm(vec2(angle * 6.0 + t, dist * 3.0)) * 0.6;
+                rays += fbm(vec2(angle * 10.0 - t * 1.2, dist * 5.0)) * 0.4;
+                rays += fbm(vec2(angle * 3.0 + t * 0.5, dist * 2.0)) * 0.5;
                 
-                // Radial falloff
+                // Radial falloff - fade out before edges
                 float innerFade = smoothstep(coreR * 0.7, coreR * 1.0, dist);
-                float outerFade = 1.0 - smoothstep(coreR, coreR + 0.35, dist);
+                float outerFade = 1.0 - smoothstep(coreR, coreR + 0.18, dist);
                 float falloff = innerFade * outerFade;
                 
                 float rayIntensity = rays * 0.6 + 0.4;
