@@ -31,7 +31,7 @@ class Corona {
     }
 
     resize() {
-        const size = Math.min(window.innerWidth, window.innerHeight);
+        const size = Math.min(window.innerWidth, window.innerHeight) * 1.5;
         this.canvas.width = size;
         this.canvas.height = size;
         if (this.gl) {
@@ -102,9 +102,9 @@ class Corona {
                 rays += fbm(vec2(angle * 10.0 - t * 1.2, dist * 5.0)) * 0.4;
                 rays += fbm(vec2(angle * 3.0 + t * 0.5, dist * 2.0)) * 0.5;
                 
-                // Radial falloff - fade out before edges
+                // Radial falloff
                 float innerFade = smoothstep(coreR * 0.7, coreR * 1.0, dist);
-                float outerFade = 1.0 - smoothstep(coreR, coreR + 0.18, dist);
+                float outerFade = 1.0 - smoothstep(coreR, coreR + 0.35, dist);
                 float falloff = innerFade * outerFade;
                 
                 float rayIntensity = rays * 0.6 + 0.4;
