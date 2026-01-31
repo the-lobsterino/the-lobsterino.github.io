@@ -2,3 +2,5 @@ node_modules/
 test-screenshot.png
 test-webgl.mjs
 package-lock.json
+screenshot-webgl.mjs
+test-*.png
