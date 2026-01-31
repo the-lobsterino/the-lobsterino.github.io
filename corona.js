@@ -92,10 +92,10 @@ class Corona {
                 float angle = atan(pos.y, pos.x);
                 
                 // Core radius (normalized to square canvas)
-                float coreR = 0.22;
+                float coreR = 0.28;
                 
                 // Animated rays
-                float t = uTime * 0.05;
+                float t = uTime * 0.15;
                 
                 float rays = 0.0;
                 rays += fbm(vec2(angle * 8.0 + t, dist * 4.0)) * 0.5;
