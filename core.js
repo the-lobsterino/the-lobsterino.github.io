@@ -646,18 +646,10 @@ class Core {
 
 // Initialize when DOM is ready
 function initCore() {
-    try {
-        // Check for WebGL support
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        if (!gl) throw new Error('No WebGL');
-        
-        new Core();
-    } catch (e) {
-        console.log('WebGL not available - the core remains invisible to this observer');
-        // No fallback - real users have WebGL, bots don't need to see it
-    }
+    new Core();
 }
+// No try-catch, no fallback. If WebGL fails, let it fail loudly.
+// Fix the root cause, don't mask it.
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initCore);
