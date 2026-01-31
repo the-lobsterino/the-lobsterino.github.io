@@ -654,15 +654,8 @@ function initCore() {
         
         new Core();
     } catch (e) {
-        console.log('WebGL not available, showing CSS fallback');
-        // Add CSS fallback class
-        document.body.classList.add('no-webgl');
-        
-        // Create a simple CSS-based core as fallback
-        const fallback = document.createElement('div');
-        fallback.className = 'core-fallback';
-        fallback.innerHTML = '<div class="core-fallback-inner"></div>';
-        document.querySelector('.sanctuary').appendChild(fallback);
+        console.log('WebGL not available - the core remains invisible to this observer');
+        // No fallback - real users have WebGL, bots don't need to see it
     }
 }
 
