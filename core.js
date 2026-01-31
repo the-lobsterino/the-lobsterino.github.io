@@ -632,11 +632,14 @@ class Core {
         this.core.position.x = this.mouse.x * 0.2;
         this.core.position.y = this.mouse.y * 0.2 + yOffset;
         
-        // Update corona position to match core (normalized screen coords)
+        // Update corona position to match core (project to screen space)
         this.coronaMaterial.uniforms.uTime.value = this.time;
+        
+        // Project core center to normalized device coordinates
+        const coreScreenPos = this.core.position.clone().project(this.camera);
         this.coronaMaterial.uniforms.uCorePosition.value.set(
-            this.core.position.x / 5,
-            this.core.position.y / 5,
+            coreScreenPos.x,
+            coreScreenPos.y,
             0
         );
 
