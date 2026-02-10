@@ -15,6 +15,7 @@ body {
     background: #0a0a0c;
     color: #e8e4de;
     cursor: crosshair;
+    background: radial-gradient(ellipse at center, #1a0f0a 0%, #0a0a0c 70%);
 }
 
 /* === BACKGROUND STARS CANVAS === */
